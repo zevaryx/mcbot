@@ -11,6 +11,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+def get_radio_str(settings: Settings) -> str:
+    radio_freq = settings.radio.frequency
+    radio_bw = settings.radio.bandwidth
+    radio_sf = settings.radio.spreading_factor
+    radio_cr = settings.radio.coding_rate
+    
+    return f"{radio_freq},{radio_bw},{radio_sf},{radio_cr}"
+
 def create_radio(settings: Settings) -> tuple[LoRaRadio, dict[str, Any]]:
     """Create a radio instance with the specified hardware configuration.
     

@@ -19,6 +19,23 @@ class Channel(BaseModel):
     type: Literal["private", "hashtag"]
     secret: Optional[str] = None
     
+class Broker(BaseModel):
+    name: str
+    host: str
+    port: int
+    audience: str
+    jwt_expiry_minutes: int = 10
+    use_tls: bool = True
+    owner: Optional[str] = None
+    email: Optional[str] = None
+    
+class LetsMesh(BaseModel):
+    enabled: bool = False
+    iata: Optional[str] = None
+    status_interval: int = 300
+    disallowed_packet_types: list[str] = Field(default_factory=list)
+    brokers: list[Broker] = Field(default_factory=list)   
+    
 class Radio(BaseModel):
     frequency: float
     bandwidth: float
@@ -38,6 +55,7 @@ class Settings(BaseSettings, case_sensitive=False):
     logging: Logging = Logging()
     identity: Optional[str] = None
     channels: list[Channel] = Field(default_factory=list)
+    letsmesh: Optional[LetsMesh] = None
     
 def load_settings(path: str | Path = Path("config.yaml")) -> Settings:
     """Load settings from a yaml config.
