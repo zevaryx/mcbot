@@ -7,3 +7,4 @@
 - [ ] Subcommands and arguments
 - [ ] More context parameters
 - [ ] DM responses
+- [ ] Testing using MockRadio
