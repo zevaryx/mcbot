@@ -22,6 +22,24 @@ A Meshcore bot framework designed for use with Raspberry Pi hats
    3. Choose `Enable`
 2. Run `sudo reboot`
 
+## Adding to your project
+
+Until pyMC_core pushes a release with the `feat/companion` branch included, you will need to directly reference this repo in your requirements/dependencies.
+
+### `pyproject.toml`
+
+```toml
+dependencies = [
+  "mcbot@git+https://github.com/zevaryx/mcbot.git",
+]
+```
+
+### `requirements.txt
+
+```
+mcbot @ git+https://github.com/zevaryx/mcbot@main
+```
+
 ## Basic Usage
 
 ```py
