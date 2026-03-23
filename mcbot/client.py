@@ -146,10 +146,10 @@ class Bot(CompanionBase):
     # Background Tasks #
     ####################
     
-    async def _advert(self) -> None:
+    async def _advert(self, *args, **kwargs) -> None:
         await self.advertise()
         
-    async def _cleanup_cache(self) -> None:
+    async def _cleanup_cache(self, *args, **kwargs) -> None:
         to_remove = []
         for packet_hex, tstamp in self._packet_cache.items():
             if datetime.now().timestamp() > tstamp + 120:
