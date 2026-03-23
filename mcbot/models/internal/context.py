@@ -6,9 +6,6 @@ from pymc_core.protocol.packet import Packet
 if TYPE_CHECKING:
     from mcbot.client import Bot
 
-# {'group_text_data': {'text': 'Test', 'sender_name': 'ZWatt01', 'channel_name': '#mcbot', 'channel_hash': 116, 'message_type': 'plain_text', 'timestamp': 1774220017, 'flags': 0, 'full_content': 'ZWatt01: Test'}}
-# {'group_text_data': {'text': 'Test', 'sender_name': 'ZWatt01', 'channel_name': 'MeshCore Bot', 'channel_hash': 166, 'message_type': 'plain_text', 'timestamp': 1774220176, 'flags': 0, 'full_content': 'ZWatt01: Test'}}
-
 class Context:
     def __init__(self, bot: Bot, packet: Packet):
         self.bot = bot
