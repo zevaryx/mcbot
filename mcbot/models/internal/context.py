@@ -1,0 +1,34 @@
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from pymc_core.protocol.packet import Packet
+
+if TYPE_CHECKING:
+    from mcbot.client import Bot
+
+# {'group_text_data': {'text': 'Test', 'sender_name': 'ZWatt01', 'channel_name': '#mcbot', 'channel_hash': 116, 'message_type': 'plain_text', 'timestamp': 1774220017, 'flags': 0, 'full_content': 'ZWatt01: Test'}}
+# {'group_text_data': {'text': 'Test', 'sender_name': 'ZWatt01', 'channel_name': 'MeshCore Bot', 'channel_hash': 166, 'message_type': 'plain_text', 'timestamp': 1774220176, 'flags': 0, 'full_content': 'ZWatt01: Test'}}
+
+class Context:
+    def __init__(self, bot: Bot, packet: Packet):
+        self.bot = bot
+        self.packet = packet
+        self.type = packet.get_payload_type()
+        self.data = packet.decrypted.get("group_text_data")
+        self.sender = self.data.get("sender_name")
+        self.content = ": ".join(self.data.get("full_content").split(": ")[1:])
+        self.command = self.content.split("/")[1].split(" ")[0]
+        self.channel_name = self.data.get("channel_name")
+        self.channel = self.bot.channels.find_by_name(self.channel_name)
+        
+    async def reply(self, text: str):
+        full_text = f"@[{self.sender}] {text}"
+        if len(full_text) > 140:
+            raise ValueError("Length of text + sender name cannot exceed 140 characters")
+        await self.send(f"@[{self.sender}] {text}")
+        
+    async def send(self, text: str):
+        if len(text) > 140:
+            raise ValueError("Length of text cannot exceed 140 characters")
+        await self.bot.send_channel_message(self.channel, text)
+        
