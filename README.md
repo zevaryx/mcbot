@@ -34,7 +34,7 @@ dependencies = [
 ]
 ```
 
-### `requirements.txt
+### `requirements.txt`
 
 ```
 mcbot @ git+https://github.com/zevaryx/mcbot@main
