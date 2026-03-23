@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from hashlib import sha256
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Optional
 
 from pymc_core import LocalIdentity
@@ -19,6 +19,7 @@ from pymc_core.protocol.constants import (
 )
 from pymc_core.protocol.packet import Packet
 
+from mcbot.helpers.letsmesh import LetsMeshHelper
 from mcbot.models.internal.command import Command, CallbackType
 from mcbot.models.internal.context import Context
 from mcbot.models.internal.task import Task
@@ -31,6 +32,21 @@ if TYPE_CHECKING:
     from mcbot.settings import Settings
 
 class Bot(CompanionBase):
+    node: MeshNode
+    logger: logging.Logger
+    
+    _settings: Settings
+    _identity: LocalIdentity
+    _packet_cache: dict[str, float]
+    _start_time: datetime
+    _dispatcher_task: Optional[asyncio.Task]
+    _packets_sent: int
+    _packets_received: int
+    _letsmesh: LetsMeshHelper
+    
+    __commands: list[Command]
+    __tasks: list[Task]
+    
     def __init__(self, settings: Settings):
         logging.basicConfig(level=settings.logging.level, format=settings.logging.format)
         self.logger = logging.getLogger(__name__)
@@ -43,6 +59,9 @@ class Bot(CompanionBase):
         self.__commands: list[Command] = []
         self.__tasks: list[Task] = []
         self._packet_cache: dict[str, float] = {}
+        
+        self._packets_sent = 0
+        self._packets_received = 0
         
         # TODO:
         # - Add max_contacts, max_channels, and offline_queue_size to config
@@ -58,12 +77,11 @@ class Bot(CompanionBase):
             initial_contacts=None,
         )
         self._dispatcher_task: Optional[asyncio.Task] = None
+        self._letsmesh = LetsMeshHelper(self._settings, self._identity, self._live_stats)
         
-        self.node: MeshNode = None # type: ignore
-        
-        self.__cleanup_task = self.task(Task(self._cleanup_cache, IntervalTrigger(minutes=5)))
-        self.__advert_task_noon = self.task(Task(self._advert, TimeTrigger(hour=12)))
-        self.__advert_task_midnight = self.task(Task(self._advert, TimeTrigger(hour=0)))
+        self.task(Task(self._cleanup_cache, IntervalTrigger(minutes=5)))
+        self.task(Task(self._advert, TimeTrigger(hour=12)))
+        self.task(Task(self._advert, TimeTrigger(hour=0)))
         
     @property
     def is_running(self) -> bool:
@@ -108,12 +126,16 @@ class Bot(CompanionBase):
             self.logger.debug(f"Adding channel {channel.name}...")
             if not self.set_channel(idx=idx+1, name=channel.name, secret=secret):
                 self.logger.error(f"Failed to create channel: {channel.name}")
+        
+        self._running = True
+        self._start_time = datetime.now()
+        self._letsmesh.connect()
+        
         self.node.dispatcher.set_default_path_hash_mode(self.prefs.path_hash_mode)
         self._dispatcher_task = asyncio.create_task(self.node.start())
         self.logger.info(
             f"Bot started, name={self._settings.name}, key={self._identity.get_public_key().hex()[:16]}"
         )
-        self._running = True
         
         # await self.advertise()
         self.logger.info("Starting tasks")
@@ -274,6 +296,13 @@ class Bot(CompanionBase):
         if hasattr(self._radio, "get_last_snr"):
             radio_stats["last_snr"] = self._radio.get_last_snr()
         return radio_stats
+    
+    def _live_stats(self) -> dict[str, int]:
+        return {
+            "uptime_sec": (datetime.now() - self._start_time).seconds,
+            "packets_sent": self._packets_sent,
+            "packets_received": self._packets_received,
+        }
         
     ############
     # Handlers #
@@ -288,6 +317,7 @@ class Bot(CompanionBase):
         dispatcher.raw_data_received_callback = self._on_raw_custom_received
         
     async def on_packet_receive(self, packet: Packet) -> None:
+        self._packets_received += 1
         if packet.get_payload_type() not in [PAYLOAD_TYPE_GRP_TXT, PAYLOAD_TYPE_TXT_MSG]:
             return
         if packet.get_packet_hash_hex() in self._packet_cache:
@@ -299,7 +329,7 @@ class Bot(CompanionBase):
                 await self.dispatch(context.command, context)
             
     async def on_packet_send(self, packet: Packet) -> None:
-        pass
+        self._packets_sent += 1
             
     async def _on_raw_packet_rx_log(self, packet: Packet, data: bytes, analysis: Any) -> None:
         self.logger.debug(f"Got packet: {packet.get_payload_type()}")

@@ -22,6 +22,7 @@ classifiers = [
 dependencies = [
     "aiosqlite>=0.22.1",
     "croniter>=6.2.2",
+    "paho-mqtt>=2.1.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "pymc-core[hardware]@git+https://github.com/rightup/pyMC_core.git@feat/companion",
