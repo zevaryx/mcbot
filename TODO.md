@@ -1,0 +1,9 @@
+- [ ] Add more examples
+- [ ] Add MQTT support
+  - [ ] Let's Mesh/MeshMapper
+  - [ ] Standard MQTT
+- [ ] Built-in database handler
+- [ ] Global locking to prevent message sending during processing, specifically for byte-switching tasks
+- [ ] Subcommands and arguments
+- [ ] More context parameters
+- [ ] DM responses

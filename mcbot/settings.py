@@ -39,7 +39,7 @@ class Settings(BaseSettings, case_sensitive=False):
     identity: Optional[str] = None
     channels: list[Channel] = Field(default_factory=list)
     
-def load_settings(path: Path = Path("config.yaml")) -> Settings:
+def load_settings(path: str | Path = Path("config.yaml")) -> Settings:
     """Load settings from a yaml config.
     
     Args:
@@ -48,6 +48,7 @@ def load_settings(path: Path = Path("config.yaml")) -> Settings:
     Return:
         Singleton instance of settings
     """
+    path = Path(path)
     global _SETTINGS
     if not _SETTINGS:
         if not path.exists():

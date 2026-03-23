@@ -22,6 +22,7 @@ from pymc_core.protocol.packet import Packet
 from mcbot.models.internal.command import Command, CallbackType
 from mcbot.models.internal.context import Context
 from mcbot.models.internal.task import Task
+from mcbot.models.internal.triggers import IntervalTrigger, TimeTrigger
 from mcbot.utils.board_configs import HARDWARE_CONFIGS
 from mcbot.utils.identity import create_or_load_identity
 from mcbot.utils.radio import create_radio
@@ -59,6 +60,10 @@ class Bot(CompanionBase):
         self._dispatcher_task: Optional[asyncio.Task] = None
         
         self.node: MeshNode = None # type: ignore
+        
+        self.__cleanup_task = self.task(Task(self._cleanup_cache, IntervalTrigger(minutes=5)))
+        self.__advert_task_noon = self.task(Task(self._advert, TimeTrigger(hour=12)))
+        self.__advert_task_midnight = self.task(Task(self._advert, TimeTrigger(hour=0)))
         
     @property
     def is_running(self) -> bool:
