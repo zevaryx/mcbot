@@ -293,8 +293,10 @@ class Bot(CompanionBase):
         if packet.get_packet_hash_hex() in self._packet_cache:
             return
         self._packet_cache[packet.get_packet_hash_hex()] = datetime.now().timestamp()
-        context = Context(self, packet)
-        await self.dispatch(context.command, context)
+        if content := packet.decrypted.get("group_text_data", {}).get("full_content"):
+            if content.split(": ")[1].startswith("/"):
+                context = Context(self, packet)
+                await self.dispatch(context.command, context)
             
     async def on_packet_send(self, packet: Packet) -> None:
         pass
