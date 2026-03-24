@@ -350,12 +350,15 @@ class Bot(CompanionBase):
         self._packets_received += 1
         packet_record = self.create_packet_record(packet)
         self.record_packet(packet_record)
+        
+        if packet.get_packet_hash_hex() in self._packet_cache:
+            return
+        
         self._packet_cache[packet.get_packet_hash_hex()] = datetime.now().timestamp()
         
         if packet.get_payload_type() not in [PAYLOAD_TYPE_GRP_TXT, PAYLOAD_TYPE_TXT_MSG]:
             return
-        if packet.get_packet_hash_hex() in self._packet_cache:
-            return
+        
         if content := packet.decrypted.get("group_text_data", {}).get("full_content"):
             if content.split(": ")[1].startswith("/"):
                 context = Context(self, packet)
