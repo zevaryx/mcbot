@@ -185,6 +185,7 @@ class Bot(CompanionBase):
     
     async def _publish_status(self) -> None:
         if self._letsmesh:
+            self._logger.debug("Sending LetsMesh status update")
             self._letsmesh.publish_status()
     
     async def _advert(self, *args, **kwargs) -> None:
