@@ -119,6 +119,7 @@ class SQLiteHelper:
         }
         async with aiosqlite.connect(self.path) as db:
             await db.execute(SQL_INSERT_CONTACT, payload)
+            await db.commit()
             
     async def save_contacts(self, contacts: list[Contact]) -> None:
         payload = []
@@ -137,12 +138,5 @@ class SQLiteHelper:
             })
         async with aiosqlite.connect(self.path) as db:
             await db.executemany(SQL_INSERT_CONTACT, payload)
-            
-    async def set_last_advert(self, contact: Contact, last_advert: Packet) -> None:
-        payload = {
-            "public_key": binascii.hexlify(contact.public_key),
-            "last_advert_packet": last_advert.payload,
-        }
-        async with aiosqlite.connect(self.path) as db:
-            await db.execute(SQL_LAST_ADVERT, payload)
+            await db.commit()
                 
