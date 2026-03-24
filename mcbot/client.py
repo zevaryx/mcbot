@@ -95,7 +95,7 @@ class Bot(CompanionBase):
         self.task(Task(self._advert, TimeTrigger(hour=12)))
         self.task(Task(self._advert, TimeTrigger(hour=0)))
         if self._settings.letsmesh:
-            self.task(Task(self._publish_status, IntervalTrigger(minutes=self._settings.letsmesh.status_interval)))
+            self.task(Task(self._publish_status, IntervalTrigger(seconds=self._settings.letsmesh.status_interval)))
         
     @property
     def is_running(self) -> bool:
