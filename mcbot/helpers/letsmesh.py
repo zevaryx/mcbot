@@ -99,7 +99,7 @@ class LetsMeshBroker:
         payload_b64 = b64url(json.dumps(payload, separators=(",", ":")).encode())
         
         signing_input = f"{header_b64}.{payload_b64}".encode()
-        seed32 = binascii.unhexlify(self.private_key_hex)
+        seed32 = binascii.unhexlify(self.seed)
         signer = SigningKey(seed32)
         
         derived_public = binascii.hexlify(bytes(signer.verify_key)).decode()
