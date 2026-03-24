@@ -123,6 +123,8 @@ class Bot(CompanionBase):
             self._logger.warning("Bot is already running!")
             return
         
+        advert = False
+        
         self._logger.info("Starting bot!")
         if self.sqlite:
             self._logger.debug("Loading contacts from sqlite")
@@ -133,7 +135,7 @@ class Bot(CompanionBase):
             last_advert = await self.sqlite.get_last_advert()
             now = datetime.now()
             if datetime.fromtimestamp(last_advert) + timedelta(hours=12) <= datetime.now():
-                await self._advert()
+                advert = True
                 await self.sqlite.update_advert(int(now.timestamp()))
                 
         self.node = MeshNode(
@@ -175,6 +177,8 @@ class Bot(CompanionBase):
         self._logger.info(
             f"Bot started, name={self._settings.name}, key={self._identity.get_public_key().hex()[:16]}"
         )
+        if advert:
+            await self._advert()
         
         # await self.advertise()
         self._logger.info("Starting tasks")

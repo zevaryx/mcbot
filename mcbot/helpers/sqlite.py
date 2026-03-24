@@ -158,7 +158,7 @@ class SQLiteHelper:
             cursor = await db.execute("SELECT * FROM last_advert")
             result = await cursor.fetchone()
             if not result:
-                await db.execute("INSERT INTO last_advert (last_advert_timestamp) VALUES (?)", last)
+                await db.execute("INSERT INTO last_advert (last_advert_timestamp) VALUES (?)", (last,))
                 await db.commit()
             else:
                 last = result["last_advert_timestamp"]
