@@ -22,7 +22,7 @@ from pymc_core.protocol.constants import (
 from pymc_core.protocol.packet import Packet
 from pymc_core.protocol.packet_utils import PacketHeaderUtils
 
-from mcbot import __version__
+from mcbot.const import __version__
 from mcbot.helpers.letsmesh import LetsMeshHelper
 from mcbot.models.internal.command import Command, CallbackType
 from mcbot.models.internal.context import Context
