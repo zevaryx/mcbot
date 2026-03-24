@@ -450,7 +450,11 @@ class Bot(CompanionBase):
     async def dispatch(self, command: str, *args, **kwargs):
         for cmd in self.__commands:
             if cmd.name == command:
-                await cmd.callback(*args, **kwargs)
+                self._logger.debug(f"Dispatching command: {command}")
+                try:
+                    await cmd.callback(*args, **kwargs)
+                except Exception as e:
+                    self._logger.error(f"Command {command} failed: {e}", exc_info=True)
                 break
             
     ##################
