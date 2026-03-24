@@ -44,3 +44,6 @@ path = "mcbot/const.py"
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[tool.pyright]
+
