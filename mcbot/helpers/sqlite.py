@@ -112,7 +112,7 @@ class SQLiteHelper:
             "out_path_len": contact.out_path_len,
             "out_path": contact.out_path,
             "last_advert_timestamp": contact.last_advert_timestamp,
-            "last_mod": contact.last_mod,
+            "last_mod": contact.lastmod,
             "gps_lat": contact.gps_lat,
             "gps_lon": contact.gps_lon,
             "sync_since": contact.sync_since
@@ -130,7 +130,7 @@ class SQLiteHelper:
                 "out_path_len": contact.out_path_len,
                 "out_path": contact.out_path,
                 "last_advert_timestamp": contact.last_advert_timestamp,
-                "last_mod": contact.last_mod,
+                "last_mod": contact.lastmod,
                 "gps_lat": contact.gps_lat,
                 "gps_lon": contact.gps_lon,
                 "sync_since": contact.sync_since
