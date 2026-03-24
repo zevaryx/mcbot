@@ -6,7 +6,7 @@ from time import time
 from typing import TYPE_CHECKING, Any, Optional
 
 from pymc_core import LocalIdentity
-from pymc_core.companion.companion_base import CompanionBase
+from pymc_core.companion.companion_base import CompanionBase, Contact, MeshEvents
 from pymc_core.companion.constants import (
     ADV_TYPE_CHAT,
     DEFAULT_MAX_CHANNELS,
@@ -24,6 +24,7 @@ from pymc_core.protocol.packet_utils import PacketHeaderUtils
 
 from mcbot.const import __version__
 from mcbot.helpers.letsmesh import LetsMeshHelper
+from mcbot.helpers.sqlite import SQLiteHelper
 from mcbot.models.internal.command import Command, CallbackType
 from mcbot.models.internal.context import Context
 from mcbot.models.internal.packet import PacketRecord
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
 class Bot(CompanionBase):
     node: MeshNode
     name: str
+    sqlite: SQLiteHelper | None
     
     _logger: logging.Logger
     _settings: Settings
@@ -57,6 +59,10 @@ class Bot(CompanionBase):
     
     def __init__(self, settings: Settings):
         self.name = settings.name
+        try:
+            self.sqlite = SQLiteHelper(settings)
+        except Exception:
+            self._logger.warning("SQLite not configured, skipping")
         
         self.__lock = asyncio.Lock()
         
@@ -118,6 +124,13 @@ class Bot(CompanionBase):
             return
         
         self._logger.info("Starting bot!")
+        if self.sqlite:
+            self._logger.debug("Loading contacts from sqlite")
+            await self.sqlite._init_db()
+            contacts = await self.sqlite.load_contacts()
+            for contact in contacts:
+                self.add_update_contact(contact)
+                
         self.node = MeshNode(
             radio=self._radio,
             local_identity=self._identity,
@@ -366,7 +379,6 @@ class Bot(CompanionBase):
             return
         
         self._packet_cache[packet.get_packet_hash_hex()] = datetime.now().timestamp()
-        
         if packet.get_payload_type() not in [PAYLOAD_TYPE_GRP_TXT, PAYLOAD_TYPE_TXT_MSG]:
             return
         
@@ -434,6 +446,37 @@ class Bot(CompanionBase):
 
         except Exception as e:
             self._logger.error(f"Failed to publish packet to LetsMesh: {e}", exc_info=True)
+            
+    async def _handle_mesh_event(self, event_type: str, data: dict) -> None:
+        try:
+            now = int(time())
+            if event_type == MeshEvents.NEW_MESSAGE:
+                await self._handle_new_message(data)
+            elif event_type == MeshEvents.NEW_CHANNEL_MESSAGE:
+                await self._handle_new_channel_message(data)
+            elif event_type == MeshEvents.NEW_CONTACT:
+                await self._fire_callbacks("node_discovered", data)
+            elif event_type == MeshEvents.CONTACT_UPDATED:
+                pass
+            elif event_type == MeshEvents.NODE_DISCOVERED:
+                # Advert pipeline (single path): all adverts applied here; one event
+                # -> one store update and at most one advert_received (Bridge and Radio).
+                contact = Contact.from_dict(data, now=now)
+                if len(contact.public_key) >= 7 and contact.name:
+                    inbound_path = data.get("inbound_path")
+                    path_len_encoded = data.get("path_len_encoded")
+                    applied = await self._apply_advert_to_stores(
+                        contact, inbound_path, path_len_encoded=path_len_encoded
+                    )
+                    if applied is not None:
+                        if self.sqlite:
+                            await self.sqlite.save_contact(applied)
+                        await self._fire_callbacks("advert_received", applied)
+                await self._fire_callbacks("node_discovered", data)
+            elif event_type == MeshEvents.TELEMETRY_UPDATED:
+                await self._fire_callbacks("telemetry_response", data)
+        except Exception as e:
+            self._logger.error(f"Error handling mesh event {event_type}: {e}")
         
     ####################
     # Command Handling #
