@@ -94,9 +94,11 @@ class SQLiteHelper:
         """Load all contacts from the database"""
         contacts = []
         async with aiosqlite.connect(self.path) as db:
+            db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM contacts")
             results = await cursor.fetchall()
             for row in results:
+                print(row)
                 data = {
                     "public_key": binascii.unhexlify(row["public_key"]),
                     "adv_type": row["adv_type"],
@@ -104,7 +106,7 @@ class SQLiteHelper:
                     "out_path_len": row["out_path_len"],
                     "out_path": row["out_path"],
                     "last_advert_timestamp": row["last_advert_timestamp"],
-                    "last_mod": row["last_mod"],
+                    "lastmod": row["last_mod"],
                     "gps_lat": row["gps_lat"],
                     "gps_lon": row["gps_lon"],
                     "sync_since": row["sync_since"],
@@ -152,6 +154,7 @@ class SQLiteHelper:
     async def get_last_advert(self) -> int:
         last = 0
         async with aiosqlite.connect(self.path) as db:
+            db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM last_advert")
             result = await cursor.fetchone()
             if not result:
