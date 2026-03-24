@@ -9,7 +9,7 @@ from pymc_core.companion.models import Contact
 if TYPE_CHECKING:
     from mcbot.settings import Settings
     
-SQL_CREATE = """
+SQL_CREATE_CONTACTS = """
 CREATE TABLE IF NOT EXISTS "contacts" (
     "id"	INTEGER,
     "public_key"	TEXT NOT NULL UNIQUE,
@@ -24,6 +24,14 @@ CREATE TABLE IF NOT EXISTS "contacts" (
     "sync_since"	INTEGER DEFAULT 0,
     PRIMARY KEY("id" AUTOINCREMENT)
 );
+"""
+
+SQL_CREATE_LAST_ADVERT = """
+CREATE TABLE IF NOT EXISTS "last_advert" (
+    "id"	INTEGER,
+    "last_advert_timestamp"	INTEGER DEFAULT 0,
+    PRIMARY KEY("id" AUTOINCREMENT)
+)
 """
 
 SQL_INSERT_CONTACT = """
@@ -79,7 +87,8 @@ class SQLiteHelper:
         
     async def _init_db(self):
         async with aiosqlite.connect(self.path) as db:
-            await db.execute(SQL_CREATE)
+            await db.execute(SQL_CREATE_CONTACTS)
+            await db.execute(SQL_CREATE_LAST_ADVERT)
             
     async def load_contacts(self) -> list[Contact]:
         """Load all contacts from the database"""
@@ -138,5 +147,25 @@ class SQLiteHelper:
             })
         async with aiosqlite.connect(self.path) as db:
             await db.executemany(SQL_INSERT_CONTACT, payload)
+            await db.commit()
+            
+    async def get_last_advert(self) -> int:
+        last = 0
+        async with aiosqlite.connect(self.path) as db:
+            cursor = await db.execute("SELECT * FROM last_advert")
+            result = await cursor.fetchone()
+            if not result:
+                await db.execute("INSERT INTO TABLE last_advert (last_advert_timestamp) VALUES (?)", last)
+                await db.commit()
+            else:
+                last = result["last_advert_timestamp"]
+        return last
+            
+    async def update_advert(self, timestamp: int) -> None:
+        payload = {
+            "last_advert_timestamp": timestamp
+        }
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute("UPDATE TABLE last_advert SET last_advert_timestamp = :last_advert_timestamp", payload)
             await db.commit()
                 
