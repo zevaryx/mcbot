@@ -21,7 +21,7 @@ def b64url(b: bytes):
     return b64encode(b).decode("UTF-8").rstrip("=")
 
 class LetsMeshBroker:
-    """Let's Mesh Broker (also used for MeshMapper)"""
+    """LetsMesh Broker (also used for MeshMapper)"""
     
     def __init__(
         self, 
@@ -267,15 +267,17 @@ class LetsMeshBroker:
 class LetsMeshHelper:
     def __init__(self, settings: Settings, identity: LocalIdentity, live_stats: Callable | None = None):
         if not settings.letsmesh:
-            raise ValueError("Let's Mesh configuration missing")
+            raise ValueError("LetsMesh configuration missing")
         elif not settings.letsmesh.enabled:
-            raise ValueError("Let's Mesh is disabled, not configuring")
+            raise ValueError("LetsMesh is disabled, not configuring")
         elif not settings.letsmesh.iata:
-            raise ValueError("IATA required for Let's Mesh MQTT broker, not configuring")
+            raise ValueError("IATA required for LetsMesh MQTT broker, not configuring")
         
         self.settings = settings
         self.radio_str = get_radio_str(self.settings)
         self.live_stats = live_stats
+        self.public_key = identity.get_public_key().hex()
+        self.private_key_hex = identity.get_private_key().hex()
         self.brokers = [
             LetsMeshBroker(
                 **x.model_dump(), 

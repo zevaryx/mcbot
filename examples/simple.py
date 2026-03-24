@@ -23,6 +23,6 @@ async def test(ctx: Context):
 @bot.task
 @Task.create(triggers.IntervalTrigger(minutes=5))
 async def five_minute_test(bot: Bot):
-    bot.logger.info("5 minutes")
+    bot._logger.info("5 minutes")
     
 asyncio.run(bot.start())
