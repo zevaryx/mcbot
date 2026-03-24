@@ -11,8 +11,8 @@ from nacl.signing import SigningKey
 from pymc_core import LocalIdentity
 from pymc_core.protocol.utils import PAYLOAD_TYPES
 
-from .. import __version__
-from ..utils.radio import get_radio_str
+from mcbot import __version__
+from mcbot.utils.radio import get_radio_str
 
 if TYPE_CHECKING:
     from ..settings import Settings
