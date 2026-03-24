@@ -2,6 +2,7 @@ import asyncio
 import logging
 from hashlib import sha256
 from datetime import datetime, timedelta
+from time import time
 from typing import TYPE_CHECKING, Any, Optional
 
 from pymc_core import LocalIdentity
@@ -14,14 +15,17 @@ from pymc_core.companion.constants import (
 )
 from pymc_core.node.node import MeshNode
 from pymc_core.protocol.constants import (
+    PAYLOAD_TYPE_ADVERT,
     PAYLOAD_TYPE_GRP_TXT,
     PAYLOAD_TYPE_TXT_MSG,
 )
 from pymc_core.protocol.packet import Packet
+from pymc_core.protocol.packet_utils import PacketHeaderUtils
 
 from mcbot.helpers.letsmesh import LetsMeshHelper
 from mcbot.models.internal.command import Command, CallbackType
 from mcbot.models.internal.context import Context
+from mcbot.models.internal.packet import PacketRecord
 from mcbot.models.internal.task import Task
 from mcbot.models.internal.triggers import IntervalTrigger, TimeTrigger
 from mcbot.utils.board_configs import HARDWARE_CONFIGS
@@ -33,7 +37,7 @@ if TYPE_CHECKING:
 
 class Bot(CompanionBase):
     node: MeshNode
-    logger: logging.Logger
+    _logger: logging.Logger
     
     _settings: Settings
     _identity: LocalIdentity
@@ -42,23 +46,27 @@ class Bot(CompanionBase):
     _dispatcher_task: Optional[asyncio.Task]
     _packets_sent: int
     _packets_received: int
-    _letsmesh: LetsMeshHelper
+    _letsmesh: LetsMeshHelper | None
+    _disallowed_packet_types: list[str]    
     
     __commands: list[Command]
     __tasks: list[Task]
     
     def __init__(self, settings: Settings):
         logging.basicConfig(level=settings.logging.level, format=settings.logging.format)
-        self.logger = logging.getLogger(__name__)
+        self._logger = logging.getLogger(__name__)
         logging.debug(f"Creating bot with name {settings.name}")
         self._settings = settings
         self._identity = create_or_load_identity(self._settings.identity)
         self._radio, self._radio_config = create_radio(self._settings)
-        self.logger.info(f"Radio in use: {HARDWARE_CONFIGS[self._settings.hardware]['name']}")
-        self.logger.info(f"Frequency info: freq={self._radio_config['frequency']}")
+        self._logger.info(f"Radio in use: {HARDWARE_CONFIGS[self._settings.hardware]['name']}")
+        self._logger.info(f"Frequency info: freq={self._radio_config['frequency']}")
         self.__commands: list[Command] = []
         self.__tasks: list[Task] = []
         self._packet_cache: dict[str, float] = {}
+        self._disallowed_packet_types = []
+        if self._settings.letsmesh:
+            self._disallowed_packet_types = self._settings.letsmesh.disallowed_packet_types
         
         self._packets_sent = 0
         self._packets_received = 0
@@ -77,7 +85,10 @@ class Bot(CompanionBase):
             initial_contacts=None,
         )
         self._dispatcher_task: Optional[asyncio.Task] = None
-        self._letsmesh = LetsMeshHelper(self._settings, self._identity, self._live_stats)
+        try:
+            self._letsmesh = LetsMeshHelper(self._settings, self._identity, self._live_stats)
+        except Exception as e:
+            self._logger.warning(f"LetsMesh not enabled. Reason: {e}")
         
         self.task(Task(self._cleanup_cache, IntervalTrigger(minutes=5)))
         self.task(Task(self._advert, TimeTrigger(hour=12)))
@@ -94,10 +105,10 @@ class Bot(CompanionBase):
     async def start(self):
         """Start the bot."""
         if self.is_running:
-            self.logger.warning("Bot is already running!")
+            self._logger.warning("Bot is already running!")
             return
         
-        self.logger.info("Starting bot!")
+        self._logger.info("Starting bot!")
         self.node = MeshNode(
             radio=self._radio,
             local_identity=self._identity,
@@ -117,28 +128,29 @@ class Bot(CompanionBase):
                 if channel.type == "hashtag":
                     secret = sha256(channel.name.encode("UTF-8")).hexdigest()[:32]
                 elif channel.type == "private":
-                    self.logger.error(f"No secret provided for channel: {channel.name}")
+                    self._logger.error(f"No secret provided for channel: {channel.name}")
                     continue
                 else:
-                    self.logger.error(f"Unknown channel type: {channel.type}")
+                    self._logger.error(f"Unknown channel type: {channel.type}")
                     continue
             secret = bytes.fromhex(secret)
-            self.logger.debug(f"Adding channel {channel.name}...")
+            self._logger.debug(f"Adding channel {channel.name}...")
             if not self.set_channel(idx=idx+1, name=channel.name, secret=secret):
-                self.logger.error(f"Failed to create channel: {channel.name}")
+                self._logger.error(f"Failed to create channel: {channel.name}")
         
         self._running = True
         self._start_time = datetime.now()
-        self._letsmesh.connect()
+        if self._letsmesh:
+            self._letsmesh.connect()
         
         self.node.dispatcher.set_default_path_hash_mode(self.prefs.path_hash_mode)
         self._dispatcher_task = asyncio.create_task(self.node.start())
-        self.logger.info(
+        self._logger.info(
             f"Bot started, name={self._settings.name}, key={self._identity.get_public_key().hex()[:16]}"
         )
         
         # await self.advertise()
-        self.logger.info("Starting tasks")
+        self._logger.info("Starting tasks")
         for task in self.__tasks:
             task.start(self)
 
@@ -147,12 +159,12 @@ class Bot(CompanionBase):
     async def stop(self) -> None:
         """Stop the bot."""
         if not self.is_running:
-            self.logger.error("Bot is not running! Cannot stop a bot that is not running")
+            self._logger.error("Bot is not running! Cannot stop a bot that is not running")
             return
         try:
             self.node.dispatcher.remove_raw_packet_subscriber(self._on_raw_packet_rx_log)
         except Exception:
-            self.logger.debug("Remove raw packet subscriber during stop failed", exc_info=True)
+            self._logger.debug("Remove raw packet subscriber during stop failed", exc_info=True)
         if self._dispatcher_task:
             self._dispatcher_task.cancel()
             try:
@@ -161,7 +173,7 @@ class Bot(CompanionBase):
                 pass
             self._dispatcher_task = None
         self.node.stop()
-        self.logger.info("Bot stopped")
+        self._logger.info("Bot stopped")
         self._running = False
         
     ####################
@@ -224,7 +236,7 @@ class Bot(CompanionBase):
     ########################
     
     def set_advert_name(self, name: str) -> None:
-        self.logger.info(f"Changing name to from {self.node.node_name} to {name}")
+        self._logger.info(f"Changing name to from {self.node.node_name} to {name}")
         super().set_advert_name(name)
         self.node.node_name = self.prefs.node_name
 
@@ -244,7 +256,7 @@ class Bot(CompanionBase):
                 )
                 return True
             except Exception as e:
-                self.logger.error(f"Error configuring radio: {e}")
+                self._logger.error(f"Error configuring radio: {e}")
                 return False
         return True
 
@@ -255,7 +267,7 @@ class Bot(CompanionBase):
                 self._radio.set_tx_power(power_dbm) # type: ignore
                 return True
             except Exception as e:
-                self.logger.error(f"Error setting TX power: {e}")
+                self._logger.error(f"Error setting TX power: {e}")
                 return False
         return True
     
@@ -279,10 +291,10 @@ class Bot(CompanionBase):
                 event_service=self._event_service,
             )
             self._setup_packet_callbacks()
-            self.logger.info(f"Imported new identity: {self._identity.get_public_key().hex()[:16]}...")
+            self._logger.info(f"Imported new identity: {self._identity.get_public_key().hex()[:16]}...")
             return True
         except Exception as e:
-            self.logger.error(f"Error importing private key: {e}")
+            self._logger.error(f"Error importing private key: {e}")
             return False
     
     ##############
@@ -317,12 +329,16 @@ class Bot(CompanionBase):
         dispatcher.raw_data_received_callback = self._on_raw_custom_received
         
     async def on_packet_receive(self, packet: Packet) -> None:
+        
         self._packets_received += 1
+        packet_record = self.create_packet_record(packet)
+        self.record_packet(packet_record)
+        self._packet_cache[packet.get_packet_hash_hex()] = datetime.now().timestamp()
+        
         if packet.get_payload_type() not in [PAYLOAD_TYPE_GRP_TXT, PAYLOAD_TYPE_TXT_MSG]:
             return
         if packet.get_packet_hash_hex() in self._packet_cache:
             return
-        self._packet_cache[packet.get_packet_hash_hex()] = datetime.now().timestamp()
         if content := packet.decrypted.get("group_text_data", {}).get("full_content"):
             if content.split(": ")[1].startswith("/"):
                 context = Context(self, packet)
@@ -332,7 +348,7 @@ class Bot(CompanionBase):
         self._packets_sent += 1
             
     async def _on_raw_packet_rx_log(self, packet: Packet, data: bytes, analysis: Any) -> None:
-        self.logger.debug(f"Got packet: {packet.get_payload_type()}")
+        self._logger.debug(f"Got packet: {packet.get_payload_type()}")
         snr = packet.snr or packet._snr or 0.0
         rssi = packet.rssi or packet._rssi or 0
         await self._fire_callbacks("rx_log_data", snr, rssi, data)
@@ -345,6 +361,45 @@ class Bot(CompanionBase):
         snr = packet.snr or packet._snr or 0.0
         rssi = packet.rssi or packet._rssi or 0
         await self._fire_callbacks("raw_data_received", payload, snr, rssi)
+        
+    def record_packet(self, packet_record: dict, skip_letsmesh_if_invalid: bool = True):
+        self._logger.debug(
+            f"Recording packet: type={packet_record.get('type')}, "
+            f"transmitted={packet_record.get('transmitted')}"
+        )
+        
+        if skip_letsmesh_if_invalid and (reason := packet_record.get("drop_reason")):
+            self._logger.debug(f"Skipping LetsMesh publish for packet with drop_reason: {reason}")
+        else:
+            self._publish_to_letsmesh(packet_record)
+            
+    def _publish_to_letsmesh(self, packet_record: dict):
+        if not self._letsmesh:
+            return
+        
+        try:
+            packet_type = packet_record.get("type")
+            if packet_type is None:
+                self._logger.error("Cannot publish to LetsMesh: packet_record missing 'type' field")
+                return
+
+            if packet_type in self._disallowed_packet_types:
+                self._logger.debug(f"Skipped publishing packet type 0x{packet_type:02X} (disallowed)")
+                return
+
+            node_name = self._settings.name
+            packet = PacketRecord.from_packet_record(
+                packet_record, origin=node_name, origin_id=self._letsmesh.public_key
+            )
+
+            if packet:
+                self._letsmesh.publish_packet(packet.to_dict())
+                self._logger.debug(f"Published packet type 0x{packet_type:02X} to LetsMesh")
+            else:
+                self._logger.debug("Skipped LetsMesh publish: packet missing raw_packet data")
+
+        except Exception as e:
+            self._logger.error(f"Failed to publish packet to LetsMesh: {e}", exc_info=True)
         
     ####################
     # Command Handling #
@@ -366,7 +421,7 @@ class Bot(CompanionBase):
             callback: Function to call on command execution
         """
         name = callback.__name__
-        self.logger.debug(f"Adding command {self._settings.prefix}{name}")
+        self._logger.debug(f"Adding command {self._settings.prefix}{name}")
         self.__commands.append(Command(name, callback))
         return callback
         
@@ -383,6 +438,120 @@ class Bot(CompanionBase):
     ##################
     
     def task(self, task: Task) -> Task:
-        self.logger.debug(f"Adding task with {task.trigger.__class__.__name__}")
+        self._logger.debug(f"Adding task with {task.trigger.__class__.__name__}")
         self.__tasks.append(task)
         return task
+    
+    ###########
+    # Helpers #
+    ###########
+    
+    @staticmethod
+    def calculate_packet_score(snr: float, packet_len: int, spreading_factor: int = 8) -> float:
+
+        # SNR thresholds per SF (from MeshCore RadioLibWrappers.cpp)
+        snr_thresholds = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
+
+        if spreading_factor < 7:
+            return 0.0
+
+        threshold = snr_thresholds.get(spreading_factor, -10.0)
+
+        # Below threshold = no chance of success
+        if snr < threshold:
+            return 0.0
+
+        # Success rate based on SNR above threshold
+        success_rate_based_on_snr = (snr - threshold) / 10.0
+
+        # Collision penalty: longer packets more likely to collide (max 256 bytes)
+        collision_penalty = 1.0 - (packet_len / 256.0)
+
+        # Combined score
+        score = success_rate_based_on_snr * collision_penalty
+
+        return max(0.0, min(1.0, score))
+    
+    def create_packet_record(self, packet: Packet) -> dict[str, Any]:
+        if not hasattr(packet, "header") or packet.header is None:
+            self._logger.error(f"Packet missing header attribute! Packet: {packet}")
+            payload_type = 0
+            route_type = 0
+        else:
+            header_info = PacketHeaderUtils.parse_header(packet.header)
+            payload_type = header_info["payload_type"]
+            route_type = header_info["route_type"]
+            self._logger.debug(
+                f"Packet header=0x{packet.header:02x}, type={payload_type}, route={route_type}"
+            )
+            
+        snr = packet.snr or packet._snr or 0.0
+        rssi = packet.rssi or packet._rssi or 0
+        transmitted = False
+        tx_delay_ms = 0.0
+        drop_reason = None
+        original_path = list(packet.path) if packet.path else []
+        pkt_hash = packet.get_packet_hash_hex()
+        is_dupe = pkt_hash in self._packet_cache
+        
+        path_hash = None
+        display_path = (
+            original_path if original_path else (list(packet.path) if packet.path else [])
+        )
+        if display_path and len(display_path) > 0:
+            # Format path as array of uppercase hex bytes
+            path_bytes = [f"{b:02X}" for b in display_path[:8]]  # First 8 bytes max
+            if len(display_path) > 8:
+                path_bytes.append("...")
+            path_hash = "[" + ", ".join(path_bytes) + "]"
+
+        src_hash = None
+        dst_hash = None
+
+        # Payload types with dest_hash and src_hash as first 2 bytes
+        if payload_type in [0x00, 0x01, 0x02, 0x08]:
+            if hasattr(packet, "payload") and packet.payload and len(packet.payload) >= 2:
+                dst_hash = f"{packet.payload[0]:02X}"
+                src_hash = f"{packet.payload[1]:02X}"
+
+        # ADVERT packets have source identifier as first byte
+        elif payload_type == PAYLOAD_TYPE_ADVERT:
+            if hasattr(packet, "payload") and packet.payload and len(packet.payload) >= 1:
+                src_hash = f"{packet.payload[0]:02X}"
+
+
+        packet_record = {
+            "timestamp": time(),
+            "header": (
+                f"0x{packet.header:02X}"
+                if hasattr(packet, "header") and packet.header is not None
+                else None
+            ),
+            "payload": (
+                packet.payload.hex() if hasattr(packet, "payload") and packet.payload else None
+            ),
+            "payload_length": (
+                len(packet.payload) if hasattr(packet, "payload") and packet.payload else 0
+            ),
+            "type": payload_type,
+            "route": route_type,
+            "length": len(packet.payload or b""),
+            "rssi": rssi,
+            "snr": snr,
+            "score": self.calculate_packet_score(
+                snr, len(packet.payload or b""), self._settings.radio.spreading_factor
+            ),
+            "tx_delay_ms": tx_delay_ms,
+            "transmitted": transmitted,
+            "is_duplicate": is_dupe,
+            "packet_hash": pkt_hash[:16],
+            "drop_reason": drop_reason,
+            "path_hash": path_hash,
+            "src_hash": src_hash,
+            "dst_hash": dst_hash,
+            "original_path": ([f"{b:02X}" for b in original_path] if original_path else None),
+            "forwarded_path": None,
+            "raw_packet": packet.write_to().hex() if hasattr(packet, "write_to") else None,
+        }
+        
+        return packet_record
