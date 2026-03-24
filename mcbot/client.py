@@ -130,6 +130,11 @@ class Bot(CompanionBase):
             contacts = await self.sqlite.load_contacts()
             for contact in contacts:
                 self.add_update_contact(contact)
+            last_advert = await self.sqlite.get_last_advert()
+            now = datetime.now()
+            if datetime.fromtimestamp(last_advert) + timedelta(hours=12) <= datetime.now():
+                await self._advert()
+                await self.sqlite.update_advert(int(now.timestamp()))
                 
         self.node = MeshNode(
             radio=self._radio,
@@ -218,17 +223,11 @@ class Bot(CompanionBase):
     
     async def _advert(self, *args, **kwargs) -> None:
         # We need to lock while we advert because we change hash mode a few times
-        advert = self.sqlite is None
-        if self.sqlite:
-            last_advert = await self.sqlite.get_last_advert()
-            if datetime.fromtimestamp(last_advert) + timedelta(hours=12) <= datetime.now():
-                advert = True
-        if advert:
-            async with self.__lock:
-                for i in range(3):
-                    self.set_path_hash_mode(i)
-                    await self.advertise()
-                self.set_path_hash_mode(None)
+        async with self.__lock:
+            for i in range(3):
+                self.set_path_hash_mode(i)
+                await self.advertise()
+            self.set_path_hash_mode(None)
         
     async def _cleanup_cache(self, *args, **kwargs) -> None:
         to_remove = []
