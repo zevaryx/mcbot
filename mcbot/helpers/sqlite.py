@@ -49,7 +49,7 @@ INSERT INTO contacts (
     gps_lon,
     sync_since
 ) VALUES (
-    name,
+    :name,
     :public_key,
     :adv_type,
     :flags,
