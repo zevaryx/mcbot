@@ -22,6 +22,7 @@ from pymc_core.protocol.constants import (
 from pymc_core.protocol.packet import Packet
 from pymc_core.protocol.packet_utils import PacketHeaderUtils
 
+from mcbot import __version__
 from mcbot.helpers.letsmesh import LetsMeshHelper
 from mcbot.models.internal.command import Command, CallbackType
 from mcbot.models.internal.context import Context
@@ -86,7 +87,7 @@ class Bot(CompanionBase):
         )
         self._dispatcher_task: Optional[asyncio.Task] = None
         try:
-            self._letsmesh = LetsMeshHelper(self._settings, self._identity, self._live_stats)
+            self._letsmesh = LetsMeshHelper(self._settings, self._identity, __version__, self._live_stats)
         except Exception as e:
             self._logger.warning(f"LetsMesh not enabled. Reason: {e}")
         

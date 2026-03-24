@@ -11,7 +11,6 @@ from nacl.signing import SigningKey
 from pymc_core import LocalIdentity
 from pymc_core.protocol.utils import PAYLOAD_TYPES
 
-from mcbot import __version__
 from mcbot.utils.radio import get_radio_str
 
 if TYPE_CHECKING:
@@ -36,6 +35,7 @@ class LetsMeshBroker:
         radio_str: str,
         iata: str,
         node_name: str,
+        app_version: str,
         status_interval: int = 300,
         owner: str | None = None,
         email: str | None = None,
@@ -57,7 +57,7 @@ class LetsMeshBroker:
         self.email = email or ""
         self.live_stats = live_stats
         
-        self.app_version = __version__
+        self.app_version = app_version
         
         self._running = False
         self._connect_time = None
@@ -265,7 +265,7 @@ class LetsMeshBroker:
     
 
 class LetsMeshHelper:
-    def __init__(self, settings: Settings, identity: LocalIdentity, live_stats: Callable | None = None):
+    def __init__(self, settings: Settings, identity: LocalIdentity, app_version: str, live_stats: Callable | None = None):
         if not settings.letsmesh:
             raise ValueError("LetsMesh configuration missing")
         elif not settings.letsmesh.enabled:
@@ -281,6 +281,7 @@ class LetsMeshHelper:
         self.brokers = [
             LetsMeshBroker(
                 **x.model_dump(), 
+                app_version=app_version,
                 public_key=identity.get_public_key().hex(), 
                 private_key_hex=identity.get_private_key().hex(),
                 radio_str=self.radio_str,
