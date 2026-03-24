@@ -49,9 +49,8 @@ class Bot(CompanionBase):
     _packets_received: int
     _letsmesh: LetsMeshHelper | None
     _disallowed_packet_types: list[str]    
-    
-    __commands: list[Command]
-    __tasks: list[Task]
+    _commands: list[Command]
+    _tasks: list[Task]
     
     def __init__(self, settings: Settings):
         logging.basicConfig(level=settings.logging.level, format=settings.logging.format)
@@ -62,8 +61,8 @@ class Bot(CompanionBase):
         self._radio, self._radio_config = create_radio(self._settings)
         self._logger.info(f"Radio in use: {HARDWARE_CONFIGS[self._settings.hardware]['name']}")
         self._logger.info(f"Frequency info: freq={self._radio_config['frequency']}")
-        self.__commands: list[Command] = []
-        self.__tasks: list[Task] = []
+        self._commands: list[Command] = []
+        self._tasks: list[Task] = []
         self._packet_cache: dict[str, float] = {}
         self._disallowed_packet_types = []
         if self._settings.letsmesh:
