@@ -84,6 +84,9 @@ letsmesh:
       owner:
       email:
 
+sqlite:
+  path: storage.db
+
 # Logging configuration. Optional
 logging:
   level: INFO

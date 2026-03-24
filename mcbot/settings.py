@@ -19,6 +19,9 @@ class Channel(BaseModel):
     type: Literal["private", "hashtag"]
     secret: Optional[str] = None
     
+class SQLite(BaseModel):
+    path: str = "storage.db"
+    
 class Broker(BaseModel):
     name: str
     host: str
@@ -56,6 +59,7 @@ class Settings(BaseSettings, case_sensitive=False):
     identity: Optional[str] = None
     channels: list[Channel] = Field(default_factory=list)
     letsmesh: Optional[LetsMesh] = None
+    sqlite: Optional[SQLite] = None
     
 def load_settings(path: str | Path = Path("config.yaml")) -> Settings:
     """Load settings from a yaml config.
