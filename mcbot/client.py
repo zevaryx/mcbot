@@ -94,6 +94,8 @@ class Bot(CompanionBase):
         self.task(Task(self._cleanup_cache, IntervalTrigger(minutes=5)))
         self.task(Task(self._advert, TimeTrigger(hour=12)))
         self.task(Task(self._advert, TimeTrigger(hour=0)))
+        if self._settings.letsmesh:
+            self.task(Task(self._publish_status, IntervalTrigger(minutes=self._settings.letsmesh.status_interval)))
         
     @property
     def is_running(self) -> bool:
@@ -180,6 +182,10 @@ class Bot(CompanionBase):
     ####################
     # Background Tasks #
     ####################
+    
+    async def _publish_status(self) -> None:
+        if self._letsmesh:
+            self._letsmesh.publish_status()
     
     async def _advert(self, *args, **kwargs) -> None:
         await self.advertise()
