@@ -32,5 +32,6 @@ class Context:
     async def send(self, text: str):
         if len(text) > 140:
             raise ValueError("Length of text cannot exceed 140 characters")
+        self.bot.set_path_hash_mode(self.packet.get_path_hash_size() - 1)
         await self.bot.send_channel_message(self.channel, text) # type: ignore
         
