@@ -183,7 +183,7 @@ class Bot(CompanionBase):
     # Background Tasks #
     ####################
     
-    async def _publish_status(self) -> None:
+    async def _publish_status(self, *args, **kwargs) -> None:
         if self._letsmesh:
             self._logger.debug("Sending LetsMesh status update")
             self._letsmesh.publish_status()
