@@ -153,7 +153,7 @@ class Bot(CompanionBase):
         
         # await self.advertise()
         self._logger.info("Starting tasks")
-        for task in self.__tasks:
+        for task in self._tasks:
             task.start(self)
             
         await self._publish_status()
@@ -441,13 +441,13 @@ class Bot(CompanionBase):
         """
         name = callback.__name__
         self._logger.debug(f"Adding command {self._settings.prefix}{name}")
-        self.__commands.append(Command(name, callback))
+        self._commands.append(Command(name, callback))
         return callback
         
     # TODO:
     # - Add validation
     async def dispatch(self, command: str, *args, **kwargs):
-        for cmd in self.__commands:
+        for cmd in self._commands:
             if cmd.name == command:
                 self._logger.debug(f"Dispatching command: {command}")
                 try:
@@ -462,7 +462,7 @@ class Bot(CompanionBase):
     
     def task(self, task: Task) -> Task:
         self._logger.debug(f"Adding task with {task.trigger.__class__.__name__}")
-        self.__tasks.append(task)
+        self._tasks.append(task)
         return task
     
     ###########
