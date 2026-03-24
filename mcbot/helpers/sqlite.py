@@ -62,7 +62,7 @@ INSERT INTO contacts (
     :sync_since
 )
 ON CONFLICT(public_key) DO UPDATE SET
-    name=excluded.name
+    name=excluded.name,
     public_key=excluded.public_key,
     adv_type=excluded.adv_type,
     flags=excluded.flags,
