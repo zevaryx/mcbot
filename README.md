@@ -103,8 +103,57 @@ channels:
     type: private
     secret: adb501d3653248ca796763f06db04f7a
 
-storage:
-  
+# Configure LetsMesh (or MeshMapper) MQTT
+letsmesh:
+
+  # Whether or not to enable LetsMesh/MeshMapper
+  enabled: true
+
+  # Replace with your IATA, i.e. DEN, LAX, etc
+  iata: TEST
+
+  # How often to upload status intervals
+  status_interval: 300
+
+  # What packet types to disallow
+  disallowed_packet_types: []
+
+  # Which brokers to use
+  brokers:
+    
+    # LetsMesh Europe
+    - name: Europe (LetsMesh v1)
+      host: mqtt-eu-v1.letsmesh.net
+      port: 443
+      audience: mqtt-eu-v1.letsmesh.net
+      jwt_expiry_minuets: 10
+      use_tls: true
+      owner:
+      email:
+
+    # LetsMesh US
+    - name: US West (LetsMesh v1)
+      host: mqtt-us-v1.letsmesh.net
+      port: 443
+      audience: mqtt-us-v1.letsmesh.net
+      jwt_expiry_minuets: 10
+      use_tls: true
+      owner:
+      email:
+
+    # MeshMapper
+    - name: Meshmapper
+      host: mqtt.meshmapper.cc
+      port: 443
+      audience: mqtt.meshmapper.cc
+      jwt_expiry_minuets: 10
+      use_tls: true
+      owner:
+      email:
+
+# SQLite storage path for contact storage
+sqlite:
+  path: storage.db
 
 # Logging configuration. Optional
 logging:
