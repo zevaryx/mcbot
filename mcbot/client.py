@@ -53,8 +53,12 @@ class Bot(CompanionBase):
     _commands: list[Command]
     _tasks: list[Task]
     
+    __lock: asyncio.Lock
+    
     def __init__(self, settings: Settings):
         self.name = settings.name
+        
+        self.__lock = asyncio.Lock()
         
         logging.basicConfig(level=settings.logging.level, format=settings.logging.format)
         self._logger = logging.getLogger(__name__)
@@ -200,7 +204,12 @@ class Bot(CompanionBase):
             self._logger.debug(f"Publish status result: {result_data}")
     
     async def _advert(self, *args, **kwargs) -> None:
-        await self.advertise()
+        # We need to lock while we advert because we change hash mode a few times
+        async with self.__lock:
+            for i in range(3):
+                self.set_path_hash_mode(i)
+                await self.advertise()
+            self.set_path_hash_mode(None)
         
     async def _cleanup_cache(self, *args, **kwargs) -> None:
         to_remove = []
@@ -245,9 +254,9 @@ class Bot(CompanionBase):
         super().set_flood_region(region_name)
         self.node.dispatcher.flood_transport_key = self._flood_transport_key
 
-    def set_path_hash_mode(self, mode: int) -> None:
+    def set_path_hash_mode(self, mode: int | None) -> None:
         """Set path hash mode and sync to dispatcher default."""
-        super().set_path_hash_mode(mode)
+        super().set_path_hash_mode(mode) # type: ignore
         self.node.dispatcher.set_default_path_hash_mode(self.prefs.path_hash_mode)
         
     ########################
@@ -457,7 +466,8 @@ class Bot(CompanionBase):
             if cmd.name == command:
                 self._logger.debug(f"Dispatching command: {command}")
                 try:
-                    await cmd.callback(*args, **kwargs)
+                    async with self.__lock:
+                        await cmd.callback(*args, **kwargs)
                 except Exception as e:
                     self._logger.error(f"Command {command} failed: {e}", exc_info=True)
                 break
