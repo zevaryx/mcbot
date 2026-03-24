@@ -89,11 +89,11 @@ class LetsMeshBroker:
             payload["email"] = ""
             payload["owner"] = ""
             if not self.use_tls:
-                self._logger.debug("Broker {self.name}: JWT excludes email/owner (TLS disabled)")
+                self._logger.debug(f"Broker {self.name}: JWT excludes email/owner (TLS disabled)")
             elif not self._tls_verified:
-                self._logger.debug("Broker {self.name}: JWT excludes email/owner (TLS not verified yet)")
+                self._logger.debug(f"Broker {self.name}: JWT excludes email/owner (TLS not verified yet)")
             else:
-                self._logger.debug("Broker {self.name}: JWT excludes email/owner (email/owner not configured)")
+                self._logger.debug(f"Broker {self.name}: JWT excludes email/owner (email/owner not configured)")
                 
         header_b64 = b64url(json.dumps(headers, separators=(",", ":")).encode())
         payload_b64 = b64url(json.dumps(payload, separators=(",", ":")).encode())
