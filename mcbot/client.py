@@ -156,6 +156,8 @@ class Bot(CompanionBase):
         self._logger.info("Starting tasks")
         for task in self.__tasks:
             task.start(self)
+            
+        await self._publish_status()
 
         await self._dispatcher_task
         
