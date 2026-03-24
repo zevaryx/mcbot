@@ -158,7 +158,7 @@ class SQLiteHelper:
             cursor = await db.execute("SELECT * FROM last_advert")
             result = await cursor.fetchone()
             if not result:
-                await db.execute("INSERT INTO TABLE last_advert (last_advert_timestamp) VALUES (?)", last)
+                await db.execute("INSERT INTO last_advert (last_advert_timestamp) VALUES (?)", last)
                 await db.commit()
             else:
                 last = result["last_advert_timestamp"]
@@ -169,6 +169,6 @@ class SQLiteHelper:
             "last_advert_timestamp": timestamp
         }
         async with aiosqlite.connect(self.path) as db:
-            await db.execute("UPDATE TABLE last_advert SET last_advert_timestamp = :last_advert_timestamp", payload)
+            await db.execute("UPDATE last_advert SET last_advert_timestamp = :last_advert_timestamp", payload)
             await db.commit()
                 
