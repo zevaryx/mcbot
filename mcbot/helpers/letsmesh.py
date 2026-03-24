@@ -32,6 +32,7 @@ class LetsMeshBroker:
         use_tls: bool,
         public_key: str, 
         private_key_hex: str,
+        seed: str,
         radio_str: str,
         iata: str,
         node_name: str,
@@ -49,6 +50,7 @@ class LetsMeshBroker:
         self.use_tls = use_tls
         self.public_key = public_key
         self.private_key_hex = private_key_hex
+        self.seed = seed
         self.radio_str = radio_str
         self.iata = iata
         self.node_name = node_name
@@ -265,7 +267,7 @@ class LetsMeshBroker:
     
 
 class LetsMeshHelper:
-    def __init__(self, settings: Settings, identity: LocalIdentity, app_version: str, live_stats: Callable | None = None):
+    def __init__(self, settings: Settings, identity: LocalIdentity, seed: str, app_version: str, live_stats: Callable | None = None):
         if not settings.letsmesh:
             raise ValueError("LetsMesh configuration missing")
         elif not settings.letsmesh.enabled:
@@ -278,12 +280,14 @@ class LetsMeshHelper:
         self.live_stats = live_stats
         self.public_key = identity.get_public_key().hex()
         self.private_key_hex = identity.get_private_key().hex()
+        self.seed = seed
         self.brokers = [
             LetsMeshBroker(
                 **x.model_dump(), 
                 app_version=app_version,
-                public_key=identity.get_public_key().hex(), 
-                private_key_hex=identity.get_private_key().hex(),
+                public_key=self.public_key, 
+                private_key_hex=self.private_key_hex,
+                seed=self.seed,
                 radio_str=self.radio_str,
                 iata=settings.letsmesh.iata,
                 node_name=settings.name,

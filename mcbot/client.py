@@ -30,7 +30,7 @@ from mcbot.models.internal.packet import PacketRecord
 from mcbot.models.internal.task import Task
 from mcbot.models.internal.triggers import IntervalTrigger, TimeTrigger
 from mcbot.utils.board_configs import HARDWARE_CONFIGS
-from mcbot.utils.identity import create_or_load_identity
+from mcbot.utils.identity import create_or_load_identity, get_seed
 from mcbot.utils.radio import create_radio
 
 if TYPE_CHECKING:
@@ -87,7 +87,7 @@ class Bot(CompanionBase):
         )
         self._dispatcher_task: Optional[asyncio.Task] = None
         try:
-            self._letsmesh = LetsMeshHelper(self._settings, self._identity, __version__, self._live_stats)
+            self._letsmesh = LetsMeshHelper(self._settings, self._identity, get_seed(), __version__, self._live_stats)
         except Exception as e:
             self._logger.warning(f"LetsMesh not enabled. Reason: {e}")
         
