@@ -40,7 +40,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "mcbot/__init__.py"
+path = "mcbot/const.py"
 
 [tool.hatch.metadata]
 allow-direct-references = true
