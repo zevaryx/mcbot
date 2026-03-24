@@ -84,7 +84,7 @@ class LetsMeshBroker:
         if self.use_tls and self._tls_verified and (self.email or self.owner):
             payload["email"] = self.email
             payload["owner"] = self.owner
-            self._logger.debug("Broker {self.name}: JWT includes email/owner (TLS verified)")
+            self._logger.debug(f"Broker {self.name}: JWT includes email/owner (TLS verified)")
         else:
             payload["email"] = ""
             payload["owner"] = ""
@@ -155,7 +155,7 @@ class LetsMeshBroker:
             # Mark as verified - if connection fails, we won't connect anyway
             self._tls_verified = True
             if self.email or self.owner:
-                self._logger.info("TLS enabled with certificate verification - email/owner will be included")
+                self._logger.info(f"{self.name}: TLS enabled with certificate verification - email/owner will be included")
             protocol = "wss"
         else:
             protocol = "ws"
