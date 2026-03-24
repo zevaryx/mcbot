@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 SQL_CREATE_CONTACTS = """
 CREATE TABLE IF NOT EXISTS "contacts" (
     "id"	INTEGER,
+    "name"  TEXT NOT NULL,
     "public_key"	TEXT NOT NULL UNIQUE,
     "adv_type"	INTEGER DEFAULT 0,
     "flags"	INTEGER DEFAULT 0,
@@ -36,6 +37,7 @@ CREATE TABLE IF NOT EXISTS "last_advert" (
 
 SQL_INSERT_CONTACT = """
 INSERT INTO contacts (
+    name,
     public_key,
     adv_type,
     flags,
@@ -47,6 +49,7 @@ INSERT INTO contacts (
     gps_lon,
     sync_since
 ) VALUES (
+    name,
     :public_key,
     :adv_type,
     :flags,
@@ -59,6 +62,7 @@ INSERT INTO contacts (
     :sync_since
 )
 ON CONFLICT(public_key) DO UPDATE SET
+    name=excluded.name
     public_key=excluded.public_key,
     adv_type=excluded.adv_type,
     flags=excluded.flags,
@@ -100,6 +104,7 @@ class SQLiteHelper:
             for row in results:
                 print(row)
                 data = {
+                    "name": row["name"],
                     "public_key": binascii.unhexlify(row["public_key"]),
                     "adv_type": row["adv_type"],
                     "flags": row["flags"],
@@ -117,6 +122,7 @@ class SQLiteHelper:
                 
     async def save_contact(self, contact: Contact) -> None:
         payload = {
+            "name": contact.name,
             "public_key": binascii.hexlify(contact.public_key),
             "adv_type": contact.adv_type,
             "flags": contact.flags,
@@ -136,6 +142,7 @@ class SQLiteHelper:
         payload = []
         for contact in contacts:
             payload.append({
+                "name": contact.name,
                 "public_key": binascii.hexlify(contact.public_key),
                 "adv_type": contact.adv_type,
                 "flags": contact.flags,
