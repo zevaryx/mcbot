@@ -14,7 +14,7 @@ class Context:
         self.data = packet.decrypted.get("group_text_data")
         if not self.data:
             raise ValueError("Invalid packet")
-        self.sender = self.data.get("sender_name")
+        self.sender: str = self.data.get("sender_name")
         self.content = ": ".join(self.data.get("full_content").split(": ")[1:])
         self.command = self.content.split("/")[1].split(" ")[0]
         self.channel_name = self.data.get("channel_name")

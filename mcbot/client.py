@@ -38,8 +38,9 @@ if TYPE_CHECKING:
 
 class Bot(CompanionBase):
     node: MeshNode
-    _logger: logging.Logger
+    name: str
     
+    _logger: logging.Logger
     _settings: Settings
     _identity: LocalIdentity
     _packet_cache: dict[str, float]
@@ -53,9 +54,11 @@ class Bot(CompanionBase):
     _tasks: list[Task]
     
     def __init__(self, settings: Settings):
+        self.name = settings.name
+        
         logging.basicConfig(level=settings.logging.level, format=settings.logging.format)
         self._logger = logging.getLogger(__name__)
-        logging.debug(f"Creating bot with name {settings.name}")
+        logging.debug(f"Creating bot with name {self.name}")
         self._settings = settings
         self._identity = create_or_load_identity(self._settings.identity)
         self._radio, self._radio_config = create_radio(self._settings)
@@ -356,6 +359,9 @@ class Bot(CompanionBase):
         self._packet_cache[packet.get_packet_hash_hex()] = datetime.now().timestamp()
         
         if packet.get_payload_type() not in [PAYLOAD_TYPE_GRP_TXT, PAYLOAD_TYPE_TXT_MSG]:
+            return
+        
+        if self.node.dispatcher._is_own_packet(packet):
             return
         
         if content := packet.decrypted.get("group_text_data", {}).get("full_content"):
