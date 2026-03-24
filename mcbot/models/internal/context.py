@@ -15,8 +15,9 @@ class Context:
         if not self.data:
             raise ValueError("Invalid packet")
         self.sender: str = self.data.get("sender_name")
-        self.content = ": ".join(self.data.get("full_content").split(": ")[1:])
-        self.command = self.content.split("/")[1].split(" ")[0]
+        self.full_content = ": ".join(self.data.get("full_content").split(": ")[1:])
+        self.command = self.full_content.split("/")[1].split(" ")[0]
+        self.content = self.command.join(self.full_content.split(self.command)[1:]).strip()
         self.channel_name = self.data.get("channel_name")
         self.channel = self.bot.channels.find_by_name(self.channel_name)
         if not self.channel:
