@@ -134,9 +134,9 @@ class LetsMeshBroker:
                 import threading
                 self._status_task = threading.Thread(target=self._status_heartbeat_loop, daemon=True)
                 self._status_task.start()
-                logging.info(f"Started status heartbeat (interval: {self.status_interval}s)")
+                self._logger.info(f"Started status heartbeat (interval: {self.status_interval}s)")
         else:
-            logging.error(f"Failed with code {rc}")
+            self._logger.error(f"Failed with code {rc}")
             
     def _on_disconnect(self, client, userdata, rc):
         self._logger.warning(f"Disconnected (rc={rc})")
