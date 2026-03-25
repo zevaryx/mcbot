@@ -261,6 +261,7 @@ class LetsMeshBroker:
         topic = self._topic(subtopic)
         message = json.dumps(payload)
         result = self.client.publish(topic, message, retain=retain)
+        self._logger.debug(f"Broker {self.name}: Publish result: {result.rc=} {result.is_published()=}")
         self._logger.debug(f"Broker {self.name}: Published to {topic}: {message}")
         return result
             
