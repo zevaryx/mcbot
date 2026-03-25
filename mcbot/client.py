@@ -59,7 +59,7 @@ class Bot(CompanionBase):
     _tasks: list[Task]
     _extensions: dict[str, Extension]
     
-    __lock: asyncio.Lock
+    _lock: asyncio.Lock
     
     def __init__(self, settings: Settings):
         self.name = settings.name
@@ -68,7 +68,7 @@ class Bot(CompanionBase):
         except Exception:
             self._logger.warning("SQLite not configured, skipping")
         
-        self.__lock = asyncio.Lock()
+        self._lock = asyncio.Lock()
         
         logging.basicConfig(level=settings.logging.level, format=settings.logging.format)
         self._logger = logging.getLogger(__name__)
@@ -233,7 +233,7 @@ class Bot(CompanionBase):
     
     async def _advert(self, *args, **kwargs) -> None:
         # We need to lock while we advert because we change hash mode a few times
-        async with self.__lock:
+        async with self._lock:
             for i in range(3):
                 self.set_path_hash_mode(i)
                 await self.advertise()
@@ -544,7 +544,7 @@ class Bot(CompanionBase):
     async def dispatch(self, command: Command, ctx: Context, *args, **kwargs):
         self._logger.debug(f"Dispatching command: {command.name}")
         try:
-            async with self.__lock:
+            async with self._lock:
                 await command.dispatch(ctx, *args, **kwargs)
         except Exception as e:
             self._logger.error(f"Command {command} failed: {e}", exc_info=True)
