@@ -34,7 +34,7 @@ class Extension:
         instance._tasks = []
         
         callables: list[tuple[str, Callable]] = inspect.getmembers(
-            instance, predicate=lambda x: isinstance(x, (CallbackType, Task)) # type: ignore
+            instance, predicate=lambda x: isinstance(x, (Callable, Task))
         )
         
         for _name, val in callables:
