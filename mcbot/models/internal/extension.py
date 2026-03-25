@@ -1,12 +1,11 @@
 import inspect
 from typing import TYPE_CHECKING, Callable
 
-from mcbot.models.internal.command import CallbackType
+from mcbot.models.internal.command import CallbackType, Command
+from mcbot.models.internal.task import Task
 
 if TYPE_CHECKING:
     from mcbot.client import Bot
-    from mcbot.models.internal.command import Command
-    from mcbot.models.internal.task import Task
 
 class Extension:
     name: str
