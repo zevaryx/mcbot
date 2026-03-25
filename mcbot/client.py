@@ -545,7 +545,7 @@ class Bot(CompanionBase):
         self._logger.debug(f"Dispatching command: {command.name}")
         try:
             async with self.__lock:
-                await command.callback(context, *args, **kwargs)
+                await command.dispatch(context, *args, **kwargs)
         except Exception as e:
             self._logger.error(f"Command {command} failed: {e}", exc_info=True)
             
