@@ -1,7 +1,7 @@
 import inspect
 from typing import Callable, Any, Awaitable, TYPE_CHECKING
 
-from mcbot.settings import load_settings
+from mcbot.settings import Settings
 
 if TYPE_CHECKING:
     from mcbot import Context
@@ -42,7 +42,7 @@ def command(
         callback: Function to call on command execution
     """
     def wrapper(func: CallbackType) -> Command:
-        settings = load_settings()
+        settings = Settings.load_settings()
         if not inspect.iscoroutinefunction(func):
             raise ValueError("Commands must be coroutines!")
         

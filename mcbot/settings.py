@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal, Optional, ClassVar, Any, Self
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
@@ -11,6 +11,33 @@ try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
+    
+class SingletonSettings(BaseSettings):
+    """A Singleton settings instance class."""
+    
+    _instance: ClassVar[Any | None] = None
+    
+    def __new__(cls: type[Self], *args, **kwargs) -> Self:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+        return cls._instance
+    
+    @classmethod
+    def load_settings(cls: type[Self], path: str | Path = Path("config.yaml")) -> Self:
+        """Load settings from a yaml config.
+    
+        Args:
+            path: Path to the config file
+            
+        Return:
+            Singleton instance of settings
+        """
+        path = Path(path)
+        if not path.exists():
+            raise ValueError(f"Config file not found: {path}")
+        with path.open() as f:
+            data = yaml.load(f, Loader=Loader)
+        return cls(**data)
 
 _SETTINGS: Settings = None # type: ignore
 
@@ -50,7 +77,7 @@ class Logging(BaseModel):
     level: str = "INFO"
     format: str = "[%(asctime)s][%(name)s][%(levelname)s] %(message)s"
     
-class Settings(BaseSettings, case_sensitive=False):
+class Settings(SingletonSettings, case_sensitive=False):
     name: str = "MCBot"
     prefix: str = "/"
     hardware: BOARD_LITERAL
@@ -62,14 +89,7 @@ class Settings(BaseSettings, case_sensitive=False):
     sqlite: Optional[SQLite] = None
     
 def load_settings(path: str | Path = Path("config.yaml")) -> Settings:
-    """Load settings from a yaml config.
     
-    Args:
-        path: Path to the config file
-        
-    Return:
-        Singleton instance of settings
-    """
     path = Path(path)
     global _SETTINGS
     if not _SETTINGS:
