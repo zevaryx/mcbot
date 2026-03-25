@@ -15,8 +15,8 @@ class Command:
         self.description = description or callback.__doc__
         self.help = help
         
-    async def dispatch(self, context: Context, *args, **kwargs) -> Any:
-        await self.callback(context, *args, **kwargs)
+    async def dispatch(self, ctx: Context, *args, **kwargs) -> Any:
+        await self.callback(ctx, *args, **kwargs)
         
 def command(
     name: str = "",
