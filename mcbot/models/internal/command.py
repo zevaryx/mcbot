@@ -42,7 +42,7 @@ def command(
         
         _name = name or func.__name__
         _description = description or func.__doc__ or "No description"
-        _help = help or description or settings.prefix + _name
+        _help = help or settings.prefix + _name
         cmd = Command(_name, func, _description, _help)
         return cmd
     return wrapper
