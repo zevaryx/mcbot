@@ -54,7 +54,7 @@ class Bot(CompanionBase):
     _packets_received: int
     _letsmesh: LetsMeshHelper | None
     _disallowed_packet_types: list[str]    
-    _commands: list[Command]
+    _commands: dict[str, Command]
     _tasks: list[Task]
     _extensions: dict[str, Extension]
     
@@ -77,7 +77,7 @@ class Bot(CompanionBase):
         self._radio, self._radio_config = create_radio(self._settings)
         self._logger.info(f"Radio in use: {HARDWARE_CONFIGS[self._settings.hardware]['name']}")
         self._logger.info(f"Frequency info: freq={self._radio_config['frequency']}")
-        self._commands = []
+        self._commands = {}
         self._tasks = []
         self._extensions = {}
         self._packet_cache = {}
@@ -498,8 +498,11 @@ class Bot(CompanionBase):
     
     def add_command(self, cmd: Command) -> Command:
         self._logger.debug(f"Adding command {self._settings.prefix}{cmd.name}")
-        self._commands.append(cmd)
+        self._commands[cmd.name] = cmd
         return cmd
+    
+    def get_command(self, name: str) -> Command | None:
+        return self._commands.get(name, None)
         
     def command(
         self,
@@ -537,15 +540,15 @@ class Bot(CompanionBase):
     # TODO:
     # - Add validation
     async def dispatch(self, command: str, *args, **kwargs):
-        for cmd in self._commands:
-            if cmd.name == command:
-                self._logger.debug(f"Dispatching command: {command}")
-                try:
-                    async with self.__lock:
-                        await cmd.callback(*args, **kwargs)
-                except Exception as e:
-                    self._logger.error(f"Command {command} failed: {e}", exc_info=True)
-                break
+        if cmd := self.get_command(command):
+            self._logger.debug(f"Dispatching command: {command}")
+            try:
+                async with self.__lock:
+                    await cmd.callback(*args, **kwargs)
+            except Exception as e:
+                self._logger.error(f"Command {command} failed: {e}", exc_info=True)
+            
+        self._logger.warning(f"Unknown command: {command}")
             
     ##################
     # Tasks Handling #
