@@ -5,7 +5,6 @@ from mcbot.settings import load_settings
 
 if TYPE_CHECKING:
     from mcbot import Context
-    from mcbot.models.internal.extension import Extension
 
 CallbackType = Callable[..., Awaitable[Any]]
 
@@ -17,8 +16,8 @@ class Command:
         self.help = help
         
     async def dispatch(self, ctx: Context, *args, **kwargs) -> Any:
-        if mself := getattr(self.callback, "__self__", None):
-            self.callback(mself, ctx, *args, **kwargs)
+        if ext := ctx.bot._extensions.get(self.callback.__qualname__.split(".")[0]):
+            await self.callback(ext, ctx, *args, **kwargs)
         else:
             await self.callback(ctx, *args, **kwargs)
             
