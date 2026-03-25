@@ -494,8 +494,7 @@ class Bot(CompanionBase):
     ####################
         
     def command(
-        self, 
-        callback: CallbackType, 
+        self,
         name: str = "", 
         description: str = "", 
         help: str = ""
@@ -518,8 +517,8 @@ class Bot(CompanionBase):
             if not inspect.iscoroutinefunction(func):
                 raise ValueError("Commands must be coroutines!")
             
-            _name = name or callback.__name__
-            _description = description or callback.__doc__ or "No description"
+            _name = name or func.__name__
+            _description = description or func.__doc__ or "No description"
             _help = description or help or self._settings.prefix + _name
             cmd = Command(_name, func, _description, _help)
             self._logger.debug(f"Adding command {self._settings.prefix}{name}")
