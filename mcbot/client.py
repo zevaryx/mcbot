@@ -495,7 +495,8 @@ class Bot(CompanionBase):
         
     def command(
         self,
-        name: str = "", 
+        name: str = "",
+        *,
         description: str = "", 
         help: str = ""
     ) -> Callable[[CallbackType], Command]:
