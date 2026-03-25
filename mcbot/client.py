@@ -401,7 +401,7 @@ class Bot(CompanionBase):
         if content := packet.decrypted.get("group_text_data", {}).get("full_content"):
             if content.split(": ")[1].startswith("/"):
                 context = Context(self, packet)
-                await self.dispatch(context.command, context)
+                await self.dispatch(context.command.name, context)
             
     async def on_packet_send(self, packet: Packet) -> None:
         self._packets_sent += 1

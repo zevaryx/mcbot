@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from pymc_core.protocol.packet import Packet
 
 if TYPE_CHECKING:
-    from mcbot.client import Bot
+    from mcbot.client import Bot, Command
 
 class Context:
     def __init__(self, bot: Bot, packet: Packet):
@@ -16,8 +16,9 @@ class Context:
             raise ValueError("Invalid packet")
         self.sender: str = self.data.get("sender_name")
         self.full_content = ": ".join(self.data.get("full_content").split(": ")[1:])
-        self.command = self.full_content.split("/")[1].split(" ")[0]
-        self.content = self.command.join(self.full_content.split(self.command)[1:]).strip()
+        cmd = self.full_content.split("/")[1].split(" ")[0]
+        self.command: Command = self.bot.get_command(cmd) # type: ignore
+        self.content = cmd.join(self.full_content.split(cmd)[1:]).strip()
         self.channel_name = self.data.get("channel_name")
         self.channel = self.bot.channels.find_by_name(self.channel_name)
         if not self.channel:

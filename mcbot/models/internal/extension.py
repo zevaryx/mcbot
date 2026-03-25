@@ -69,7 +69,7 @@ class Extension:
     
     def drop(self) -> None:
         for func in self._commands:
-            self._bot._commands.remove(func)
+            self._bot._commands.pop(func.name)
         for task in self._tasks:
             task.stop()
             self._bot._tasks.remove(task)
