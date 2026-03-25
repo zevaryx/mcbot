@@ -1,7 +1,10 @@
 import inspect
-from typing import Callable, Any, Awaitable
+from typing import Callable, Any, Awaitable, TYPE_CHECKING
 
 from mcbot.settings import load_settings
+
+if TYPE_CHECKING:
+    from mcbot import Context
 
 CallbackType = Callable[..., Awaitable[Any]]
 
@@ -12,8 +15,8 @@ class Command:
         self.description = description or callback.__doc__
         self.help = help
         
-    async def dispatch(self, *args, **kwargs) -> Any:
-        await self.callback(*args, **kwargs)
+    async def dispatch(self, context: Context, *args, **kwargs) -> Any:
+        await self.callback(context, *args, **kwargs)
         
 def command(
     name: str = "",
