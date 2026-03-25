@@ -102,7 +102,6 @@ class SQLiteHelper:
             cursor = await db.execute("SELECT * FROM contacts")
             results = await cursor.fetchall()
             for row in results:
-                print(row)
                 data = {
                     "name": row["name"],
                     "public_key": binascii.unhexlify(row["public_key"]),
