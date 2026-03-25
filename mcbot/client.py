@@ -28,6 +28,7 @@ from mcbot.helpers.letsmesh import LetsMeshHelper
 from mcbot.helpers.sqlite import SQLiteHelper
 from mcbot.models.internal.command import Command, CallbackType
 from mcbot.models.internal.context import Context
+from mcbot.models.internal.extension import Extension
 from mcbot.models.internal.packet import PacketRecord
 from mcbot.models.internal.task import Task
 from mcbot.models.internal.triggers import IntervalTrigger, TimeTrigger
@@ -55,6 +56,7 @@ class Bot(CompanionBase):
     _disallowed_packet_types: list[str]    
     _commands: list[Command]
     _tasks: list[Task]
+    _extensions: dict[str, Extension]
     
     __lock: asyncio.Lock
     
@@ -75,9 +77,10 @@ class Bot(CompanionBase):
         self._radio, self._radio_config = create_radio(self._settings)
         self._logger.info(f"Radio in use: {HARDWARE_CONFIGS[self._settings.hardware]['name']}")
         self._logger.info(f"Frequency info: freq={self._radio_config['frequency']}")
-        self._commands: list[Command] = []
-        self._tasks: list[Task] = []
-        self._packet_cache: dict[str, float] = {}
+        self._commands = []
+        self._tasks = []
+        self._extensions = {}
+        self._packet_cache = {}
         self._disallowed_packet_types = []
         if self._settings.letsmesh:
             self._disallowed_packet_types = self._settings.letsmesh.disallowed_packet_types
@@ -492,6 +495,11 @@ class Bot(CompanionBase):
     ####################
     # Command Handling #
     ####################
+    
+    def add_command(self, cmd: Command) -> Command:
+        self._logger.debug(f"Adding command {self._settings.prefix}{cmd.name}")
+        self._commands.append(cmd)
+        return cmd
         
     def command(
         self,
@@ -522,8 +530,7 @@ class Bot(CompanionBase):
             _description = description or func.__doc__ or "No description"
             _help = description or help or self._settings.prefix + _name
             cmd = Command(_name, func, _description, _help)
-            self._logger.debug(f"Adding command {self._settings.prefix}{name}")
-            self._commands.append(cmd)
+            self.add_command(cmd)
             return cmd
         return wrapper
         
