@@ -403,7 +403,7 @@ class Bot(CompanionBase):
         if content := packet.decrypted.get("group_text_data", {}).get("full_content"):
             if content.split(": ")[1].startswith("/"):
                 context = Context(self, packet)
-                await self.dispatch(context.command, context=context)
+                await self.dispatch(context.command, ctx=context)
             
     async def on_packet_send(self, packet: Packet) -> None:
         self._packets_sent += 1
@@ -541,11 +541,11 @@ class Bot(CompanionBase):
         
     # TODO:
     # - Add validation
-    async def dispatch(self, command: Command, context: Context, *args, **kwargs):
+    async def dispatch(self, command: Command, ctx: Context, *args, **kwargs):
         self._logger.debug(f"Dispatching command: {command.name}")
         try:
             async with self.__lock:
-                await command.dispatch(context, *args, **kwargs)
+                await command.dispatch(ctx, *args, **kwargs)
         except Exception as e:
             self._logger.error(f"Command {command} failed: {e}", exc_info=True)
             
