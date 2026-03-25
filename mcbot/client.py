@@ -1,9 +1,10 @@
 import asyncio
+import inspect
 import logging
 from hashlib import sha256
 from datetime import datetime, timedelta
 from time import time
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from pymc_core import LocalIdentity
 from pymc_core.companion.companion_base import CompanionBase, Contact, MeshEvents
@@ -492,14 +493,20 @@ class Bot(CompanionBase):
     # Command Handling #
     ####################
         
-    def command(self, callback: CallbackType) -> CallbackType:
+    def command(
+        self, 
+        callback: CallbackType, 
+        name: str = "", 
+        description: str = "", 
+        help: str = ""
+    ) -> Callable[[CallbackType], Command]:
         """Create a new command.
         
         Usage:
         ```
         bot = Bot(settings)
         
-        @bot.command
+        @bot.command(description="Pong!")
         async def ping(ctx):
             await ctx.send("Pong!")
         ```
@@ -507,10 +514,18 @@ class Bot(CompanionBase):
         Args:
             callback: Function to call on command execution
         """
-        name = callback.__name__
-        self._logger.debug(f"Adding command {self._settings.prefix}{name}")
-        self._commands.append(Command(name, callback))
-        return callback
+        def wrapper(func: CallbackType) -> Command:
+            if not inspect.iscoroutinefunction(func):
+                raise ValueError("Commands must be coroutines!")
+            
+            _name = name or callback.__name__
+            _description = description or callback.__doc__ or "No description"
+            _help = description or help or self._settings.prefix + _name
+            cmd = Command(_name, func, _description, _help)
+            self._logger.debug(f"Adding command {self._settings.prefix}{name}")
+            self._commands.append(cmd)
+            return cmd
+        return wrapper
         
     # TODO:
     # - Add validation
