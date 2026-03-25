@@ -401,6 +401,7 @@ class Bot(CompanionBase):
             
     async def on_packet_send(self, packet: Packet) -> None:
         self._packets_sent += 1
+        self._packet_cache[packet.get_packet_hash_hex()] = datetime.now().timestamp()
             
     async def _on_raw_packet_rx_log(self, packet: Packet, data: bytes, analysis: Any) -> None:
         self._logger.debug(f"Got packet: {packet.get_payload_type()}")
