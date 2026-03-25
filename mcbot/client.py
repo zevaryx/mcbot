@@ -42,6 +42,7 @@ if TYPE_CHECKING:
 class Bot(CompanionBase):
     node: MeshNode
     name: str
+    prefix: str
     sqlite: SQLiteHelper | None
     
     _logger: logging.Logger
@@ -73,6 +74,7 @@ class Bot(CompanionBase):
         self._logger = logging.getLogger(__name__)
         logging.debug(f"Creating bot with name {self.name}")
         self._settings = settings
+        self.prefix = self._settings.prefix
         self._identity = create_or_load_identity(self._settings.identity)
         self._radio, self._radio_config = create_radio(self._settings)
         self._logger.info(f"Radio in use: {HARDWARE_CONFIGS[self._settings.hardware]['name']}")
