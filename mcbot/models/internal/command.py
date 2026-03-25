@@ -5,6 +5,7 @@ from mcbot.settings import load_settings
 
 if TYPE_CHECKING:
     from mcbot import Context
+    from mcbot.models.internal.extension import Extension
 
 CallbackType = Callable[..., Awaitable[Any]]
 
@@ -16,8 +17,11 @@ class Command:
         self.help = help
         
     async def dispatch(self, ctx: Context, *args, **kwargs) -> Any:
-        await self.callback(ctx, *args, **kwargs)
-        
+        if mself := getattr(self.callback, "__self__", None):
+            self.callback(mself, ctx, *args, **kwargs)
+        else:
+            await self.callback(ctx, *args, **kwargs)
+            
 def command(
     name: str = "",
     *,
@@ -46,6 +50,7 @@ def command(
         _name = name or func.__name__
         _description = description or func.__doc__ or "No description"
         _help = help or settings.prefix + _name
+        
         cmd = Command(_name, func, _description, _help)
         return cmd
     return wrapper
