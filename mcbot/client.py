@@ -533,7 +533,7 @@ class Bot(CompanionBase):
             
             _name = name or func.__name__
             _description = description or func.__doc__ or "No description"
-            _help = description or help or self._settings.prefix + _name
+            _help = help or self._settings.prefix + _name
             cmd = Command(_name, func, _description, _help)
             self.add_command(cmd)
             return cmd
