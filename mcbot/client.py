@@ -403,7 +403,7 @@ class Bot(CompanionBase):
         if content := packet.decrypted.get("group_text_data", {}).get("full_content"):
             if content.split(": ")[1].startswith("/"):
                 context = Context(self, packet)
-                await self.dispatch(context.command.name, context)
+                await self.dispatch(context.command, context=context)
             
     async def on_packet_send(self, packet: Packet) -> None:
         self._packets_sent += 1
@@ -541,16 +541,13 @@ class Bot(CompanionBase):
         
     # TODO:
     # - Add validation
-    async def dispatch(self, command: str, *args, **kwargs):
-        if cmd := self.get_command(command):
-            self._logger.debug(f"Dispatching command: {command}")
-            try:
-                async with self.__lock:
-                    await cmd.callback(*args, **kwargs)
-            except Exception as e:
-                self._logger.error(f"Command {command} failed: {e}", exc_info=True)
-            
-        self._logger.warning(f"Unknown command: {command}")
+    async def dispatch(self, command: Command, context: Context, *args, **kwargs):
+        self._logger.debug(f"Dispatching command: {command.name}")
+        try:
+            async with self.__lock:
+                await command.callback(context, *args, **kwargs)
+        except Exception as e:
+            self._logger.error(f"Command {command} failed: {e}", exc_info=True)
             
     ##################
     # Tasks Handling #
