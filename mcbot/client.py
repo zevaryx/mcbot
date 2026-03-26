@@ -10,8 +10,6 @@ from pymc_core import LocalIdentity
 from pymc_core.companion.companion_base import CompanionBase, Contact, MeshEvents
 from pymc_core.companion.constants import (
     ADV_TYPE_CHAT,
-    DEFAULT_MAX_CHANNELS,
-    DEFAULT_MAX_CONTACTS,
     DEFAULT_OFFLINE_QUEUE_SIZE,
 )
 from pymc_core.node.node import MeshNode
@@ -97,8 +95,8 @@ class Bot(CompanionBase):
             identity=self._identity,
             node_name=self._settings.name,
             adv_type=ADV_TYPE_CHAT,
-            max_contacts=DEFAULT_MAX_CONTACTS,
-            max_channels=DEFAULT_MAX_CHANNELS,
+            max_contacts=self._settings.max_contacts,
+            max_channels=self._settings.max_channels,
             offline_queue_size=DEFAULT_OFFLINE_QUEUE_SIZE,
             radio_config=self._radio_config,
             initial_contacts=None,

@@ -14,6 +14,11 @@ prefix: /
 # DO NOT use the example below
 # identity: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 
+# Configure the defaults for the maximum contacts and channels
+# Below numbers are the defaults
+max_channels: 40
+max_contacts: 1000
+
 # Frequency settings. Below is the US default preset, please use your region's frequency information
 radio:
   # Frequency, in mHz

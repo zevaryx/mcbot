@@ -1,8 +1,9 @@
 from pathlib import Path
-from typing import Literal, Optional, ClassVar, Any, Self
+from typing import Literal, Optional, Self
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
+from pymc_core.companion.constants import DEFAULT_MAX_CHANNELS, DEFAULT_MAX_CONTACTS
 
 from mcbot.utils.board_configs import BOARD_LITERAL
 
@@ -52,6 +53,8 @@ class Settings(BaseSettings, case_sensitive=False):
     name: str = "MCBot"
     prefix: str = "/"
     hardware: BOARD_LITERAL
+    max_channels: int = DEFAULT_MAX_CHANNELS
+    max_contacts: int = DEFAULT_MAX_CONTACTS
     radio: Radio
     logging: Logging = Logging()
     identity: Optional[str] = None
@@ -75,17 +78,3 @@ class Settings(BaseSettings, case_sensitive=False):
         with path.open() as f:
             data = yaml.load(f, Loader=Loader)
         return cls(**data)
-    
-def load_settings(path: str | Path = Path("config.yaml")) -> Settings:
-    
-    path = Path(path)
-    global _SETTINGS
-    if not _SETTINGS:
-        if not path.exists():
-            raise ValueError(f"Config does not exist at {path}")
-        
-        with path.open() as f:
-            data = yaml.load(f, Loader=Loader)
-        
-        _SETTINGS = Settings(**data)
-    return _SETTINGS
