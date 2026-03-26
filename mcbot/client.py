@@ -498,6 +498,9 @@ class Bot(CompanionBase):
     
     def add_command(self, cmd: Command) -> Command:
         self._logger.debug(f"Adding command {self._settings.prefix}{cmd.name}")
+        # Check for default help and adjust to use prefix
+        if cmd.help == cmd.name:
+            cmd.help = self._settings.prefix + cmd.name
         self._commands[cmd.name] = cmd
         return cmd
     

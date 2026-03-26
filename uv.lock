@@ -236,7 +236,7 @@ wheels = [
 [[package]]
 name = "pymc-core"
 version = "1.0.7"
-source = { git = "https://github.com/rightup/pyMC_core.git?rev=feat%2Fcompanion#fa4e0eb781bde72975f2cdf6b285ebb4b3ed6687" }
+source = { git = "https://github.com/rightup/pyMC_core.git?rev=feat%2Fcompanion#3e687e03768dbde85ebbed8be277b4268365a644" }
 dependencies = [
     { name = "pycryptodome" },
     { name = "pynacl" },
