@@ -1,7 +1,9 @@
 import inspect
 from typing import TYPE_CHECKING, Callable
 
-from mcbot.models.internal.commands.prefixed import CallbackType, PrefixedCommand
+from mcbot.models.internal.commands import Command, CallbackType
+from mcbot.models.internal.commands.chat import ChatCommand
+from mcbot.models.internal.commands.prefixed import PrefixedCommand
 from mcbot.models.internal.task import Task
 
 if TYPE_CHECKING:
@@ -13,7 +15,7 @@ class Extension:
     description: str
         
     _bot: Bot
-    _commands: list[PrefixedCommand]
+    _commands: list[Command]
     _tasks: list[Task]
     
     def __new__(cls, bot: Bot, *args, **kwargs) -> Extension:
@@ -28,17 +30,17 @@ class Extension:
         
         instance.description = kwargs.get("description", "")
         if not instance.description:
-            instance.description = inspect.cleandoc(cls.__doc__) if cls.__doc__ else None # type: ignore
+            instance.description = inspect.cleandoc(cls.__doc__) if cls.__doc__ else ""
             
         instance._commands = []
         instance._tasks = []
         
         callables: list[tuple[str, Callable]] = inspect.getmembers(
-            instance, predicate=lambda x: isinstance(x, (PrefixedCommand, Task))
+            instance, predicate=lambda x: isinstance(x, (Command, Task))
         )
         
         for _name, val in callables:
-            if isinstance(val, PrefixedCommand):
+            if isinstance(val, Command):
                 bot.add_command(val)
                 instance._commands.append(val)
                 
@@ -63,12 +65,12 @@ class Extension:
         self._bot = value
         
     @property
-    def commands(self) -> list[PrefixedCommand]:
+    def commands(self) -> list[Command]:
         return self._commands
     
     def drop(self) -> None:
         for func in self._commands:
-            self._bot._commands.pop(func.name)
+            self._bot._commands.pop((func.name, func.cmd_type))
         for task in self._tasks:
             task.stop()
             self._bot._tasks.remove(task)

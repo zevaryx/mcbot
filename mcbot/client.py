@@ -514,6 +514,7 @@ class Bot(CompanionBase):
                 if isinstance(command, ChatCommand):
                     if any([x in command.triggers for x in cmd.triggers]):
                         raise ValueError(f"Command with name {name} and type {cmd_type.name} already has one of these triggers: {cmd.triggers}")
+            cmd.triggers = [x.lower() for x in cmd.triggers]
         self._commands[(cmd.name, cmd.cmd_type)] = cmd
         return cmd
     
@@ -523,7 +524,7 @@ class Bot(CompanionBase):
     def _contains_chat_command(self, content: str) -> ChatCommand | None:
         for command in self._commands.values():
             if isinstance(command, ChatCommand):
-                if content[0] in command.triggers or content.split(" ")[0] in command.triggers:
+                if content[0].lower() in command.triggers or content.split(" ")[0].lower() in command.triggers:
                     return command
         
     def prefixed_command(
