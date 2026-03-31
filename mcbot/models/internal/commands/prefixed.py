@@ -1,17 +1,18 @@
 import inspect
 from typing import Callable, Any, Awaitable, TYPE_CHECKING
 
+from mcbot.models.internal.commands import CallbackType, Command, CommandType
+
 if TYPE_CHECKING:
     from mcbot import Context
 
-CallbackType = Callable[..., Awaitable[Any]]
-
-class Command:
+class PrefixedCommand(Command):
     def __init__(self, name: str, callback: CallbackType, description: str = "", help: str = ""):
         self.name = name
         self.callback = callback
-        self.description = description or callback.__doc__
+        self.description = description or callback.__doc__ or ""
         self.help = help
+        self.cmd_type = CommandType.PREFIXED
         
     async def dispatch(self, ctx: Context, *args, **kwargs) -> Any:
         if ext := ctx.bot._extensions.get(self.callback.__qualname__.split(".")[0]):
@@ -19,20 +20,20 @@ class Command:
         else:
             await self.callback(ctx, *args, **kwargs)
             
-def command(
+def prefixed_command(
     name: str = "",
     *,
     description: str = "", 
     help: str = "",
     prefix: str = "",
-) -> Callable[[CallbackType], Command]:
-    """Create a new command.
+) -> Callable[[CallbackType], PrefixedCommand]:
+    """Create a new prefixed command.
     
     Usage:
     ```
     bot = Bot(settings)
     
-    @bot.command(description="Pong!")
+    @prefixed_command(description="Pong!")
     async def ping(ctx):
         await ctx.send("Pong!")
     ```
@@ -40,7 +41,7 @@ def command(
     Args:
         callback: Function to call on command execution
     """
-    def wrapper(func: CallbackType) -> Command:
+    def wrapper(func: CallbackType) -> PrefixedCommand:
         if not inspect.iscoroutinefunction(func):
             raise ValueError("Commands must be coroutines!")
         
@@ -48,6 +49,6 @@ def command(
         _description = description or func.__doc__ or "No description"
         _help = help or prefix + _name
         
-        cmd = Command(_name, func, _description, _help)
+        cmd = PrefixedCommand(_name, func, _description, _help)
         return cmd
     return wrapper

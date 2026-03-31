@@ -1,7 +1,7 @@
 import inspect
 from typing import TYPE_CHECKING, Callable
 
-from mcbot.models.internal.command import CallbackType, Command
+from mcbot.models.internal.commands.prefixed import CallbackType, PrefixedCommand
 from mcbot.models.internal.task import Task
 
 if TYPE_CHECKING:
@@ -13,7 +13,7 @@ class Extension:
     description: str
         
     _bot: Bot
-    _commands: list[Command]
+    _commands: list[PrefixedCommand]
     _tasks: list[Task]
     
     def __new__(cls, bot: Bot, *args, **kwargs) -> Extension:
@@ -34,11 +34,11 @@ class Extension:
         instance._tasks = []
         
         callables: list[tuple[str, Callable]] = inspect.getmembers(
-            instance, predicate=lambda x: isinstance(x, (Command, Task))
+            instance, predicate=lambda x: isinstance(x, (PrefixedCommand, Task))
         )
         
         for _name, val in callables:
-            if isinstance(val, Command):
+            if isinstance(val, PrefixedCommand):
                 bot.add_command(val)
                 instance._commands.append(val)
                 
@@ -63,7 +63,7 @@ class Extension:
         self._bot = value
         
     @property
-    def commands(self) -> list[Command]:
+    def commands(self) -> list[PrefixedCommand]:
         return self._commands
     
     def drop(self) -> None:

@@ -3,11 +3,13 @@ from typing import TYPE_CHECKING
 
 from pymc_core.protocol.packet import Packet
 
+from mcbot.models.internal.commands import CommandType, Command
+
 if TYPE_CHECKING:
-    from mcbot.client import Bot, Command
+    from mcbot.client import Bot, PrefixedCommand
 
 class Context:
-    def __init__(self, bot: Bot, packet: Packet):
+    def __init__(self, bot: Bot, packet: Packet, cmd_type: CommandType):
         self.bot = bot
         self.packet = packet
         self.type = packet.get_payload_type()
@@ -16,8 +18,10 @@ class Context:
             raise ValueError("Invalid packet")
         self.sender: str = self.data.get("sender_name")
         self.full_content = ": ".join(self.data.get("full_content").split(": ")[1:])
-        cmd = self.full_content.split("/")[1].split(" ")[0]
-        self.command: Command = self.bot.get_command(cmd) # type: ignore
+        cmd = self.full_content.split(" ")[0]
+        if cmd_type == CommandType.PREFIXED:
+            cmd = cmd.split("/")[1]
+        self.command: Command = self.bot.get_command(cmd, cmd_type=cmd_type) # type: ignore
         self.content = cmd.join(self.full_content.split(cmd)[1:]).strip()
         self.channel_name = self.data.get("channel_name")
         self.channel = self.bot.channels.find_by_name(self.channel_name)

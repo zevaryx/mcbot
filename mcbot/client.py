@@ -24,7 +24,9 @@ from pymc_core.protocol.packet_utils import PacketHeaderUtils
 from mcbot.const import __version__
 from mcbot.helpers.letsmesh import LetsMeshHelper
 from mcbot.helpers.sqlite import SQLiteHelper
-from mcbot.models.internal.command import Command, CallbackType
+from mcbot.models.internal.commands import Command, CommandType, CallbackType
+from mcbot.models.internal.commands.chat import ChatCommand
+from mcbot.models.internal.commands.prefixed import PrefixedCommand
 from mcbot.models.internal.context import Context
 from mcbot.models.internal.extension import Extension
 from mcbot.models.internal.packet import PacketRecord
@@ -53,7 +55,7 @@ class Bot(CompanionBase):
     _packets_received: int
     _letsmesh: LetsMeshHelper | None
     _disallowed_packet_types: list[str]    
-    _commands: dict[str, Command]
+    _commands: dict[tuple[str, CommandType], Command]
     _tasks: list[Task]
     _extensions: dict[str, Extension]
     
@@ -399,9 +401,13 @@ class Bot(CompanionBase):
             return
         
         if content := packet.decrypted.get("group_text_data", {}).get("full_content"):
-            if content.split(": ")[1].startswith("/"):
-                context = Context(self, packet)
+            content = content.split(": ")[1]
+            if content.startswith("/"):
+                context = Context(self, packet, cmd_type=CommandType.PREFIXED)
                 await self.dispatch(context.command, ctx=context)
+            elif cmd := self._contains_chat_command(content):
+                context = Context(self, packet, cmd_type=CommandType.CHAT)
+                await self.dispatch(cmd, ctx=context)
             
     async def on_packet_send(self, packet: Packet) -> None:
         self._packets_sent += 1
@@ -497,30 +503,43 @@ class Bot(CompanionBase):
     ####################
     
     def add_command(self, cmd: Command) -> Command:
-        self._logger.debug(f"Adding command {self._settings.prefix}{cmd.name}")
+        self._logger.debug(f"Adding command {cmd.name} ({cmd.__class__.__name__})")
         # Check for default help and adjust to use prefix
-        if cmd.help == cmd.name:
+        if cmd.help == cmd.name and isinstance(cmd, PrefixedCommand):
             cmd.help = self._settings.prefix + cmd.name
-        self._commands[cmd.name] = cmd
+        if self._commands.get((cmd.name, cmd.cmd_type)):
+            raise ValueError(f"Command with name {cmd.name} and type {cmd.cmd_type.name} already exists!")
+        if isinstance(cmd, ChatCommand):
+            for (name, cmd_type), command in self._commands.items():
+                if isinstance(command, ChatCommand):
+                    if any([x in command.triggers for x in cmd.triggers]):
+                        raise ValueError(f"Command with name {name} and type {cmd_type.name} already has one of these triggers: {cmd.triggers}")
+        self._commands[(cmd.name, cmd.cmd_type)] = cmd
         return cmd
     
-    def get_command(self, name: str) -> Command | None:
-        return self._commands.get(name, None)
+    def get_command(self, name: str, cmd_type: CommandType = CommandType.PREFIXED) -> Command | None:
+        return self._commands.get((name, cmd_type), None)
+    
+    def _contains_chat_command(self, content: str) -> ChatCommand | None:
+        for command in self._commands.values():
+            if isinstance(command, ChatCommand):
+                if content[0] in command.triggers or content.split(" ")[0] in command.triggers:
+                    return command
         
-    def command(
+    def prefixed_command(
         self,
         name: str = "",
         *,
         description: str = "", 
         help: str = ""
-    ) -> Callable[[CallbackType], Command]:
+    ) -> Callable[[CallbackType], PrefixedCommand]:
         """Create a new command.
         
         Usage:
         ```
         bot = Bot(settings)
         
-        @bot.command(description="Pong!")
+        @bot.prefixed_command(description="Pong!")
         async def ping(ctx):
             await ctx.send("Pong!")
         ```
@@ -528,14 +547,55 @@ class Bot(CompanionBase):
         Args:
             callback: Function to call on command execution
         """
-        def wrapper(func: CallbackType) -> Command:
+        def wrapper(func: CallbackType) -> PrefixedCommand:
             if not inspect.iscoroutinefunction(func):
                 raise ValueError("Commands must be coroutines!")
             
             _name = name or func.__name__
             _description = description or func.__doc__ or "No description"
             _help = help or self._settings.prefix + _name
-            cmd = Command(_name, func, _description, _help)
+            cmd = PrefixedCommand(_name, func, _description, _help)
+            self.add_command(cmd)
+            return cmd
+        return wrapper
+    
+    def chat_command(
+        self,
+        name: str = "",
+        *,
+        description: str = "",
+        help: str = "",
+        triggers: list[str] = [],
+    ) -> Callable[[CallbackType], ChatCommand]:
+        """Create a new chat command.
+        
+        Usage:
+        ```
+        bot = Bot(settings)
+        
+        @bot.chat_command(description="Pong!", triggers=["ping", "p"])
+        async def ping(ctx):
+        await ctx.send("Pong!")
+        ```
+        
+        Args:
+            name: Name of the command
+            description: Optional description of the command. 
+                Defaults to the docstring (what you're reading now)
+            help: Help string, i.e. `command args`
+            triggers: List of text matches. 
+                Defaults to the name and the first character of the name   
+        """
+        def wrapper(func: CallbackType) -> ChatCommand:
+            if not inspect.iscoroutinefunction(func):
+                raise ValueError("Commands must be coroutines!")
+            
+            _name = name or func.__name__
+            _description = description or func.__doc__ or "No description"
+            _help = help or _name
+            _triggers = triggers
+            
+            cmd = ChatCommand(_name, func, _description, _help, _triggers)
             self.add_command(cmd)
             return cmd
         return wrapper
@@ -543,7 +603,7 @@ class Bot(CompanionBase):
     # TODO:
     # - Add validation
     async def dispatch(self, command: Command, ctx: Context, *args, **kwargs):
-        self._logger.debug(f"Dispatching command: {command.name}")
+        self._logger.debug(f"Dispatching command: {command.name}, type: {command.cmd_type.name}")
         try:
             async with self._lock:
                 await command.dispatch(ctx, *args, **kwargs)
