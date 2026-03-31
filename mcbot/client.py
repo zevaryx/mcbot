@@ -524,7 +524,7 @@ class Bot(CompanionBase):
     def _contains_chat_command(self, content: str) -> ChatCommand | None:
         for command in self._commands.values():
             if isinstance(command, ChatCommand):
-                if content[0].lower() in command.triggers or content.split(" ")[0].lower() in command.triggers:
+                if content.split(" ")[0].lower() in command.triggers:
                     return command
         
     def prefixed_command(
