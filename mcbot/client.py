@@ -12,7 +12,6 @@ from pymc_core.companion.constants import (
     ADV_TYPE_CHAT,
     DEFAULT_OFFLINE_QUEUE_SIZE,
 )
-from pymc_core.node.node import MeshNode
 from pymc_core.protocol.constants import (
     PAYLOAD_TYPE_ADVERT,
     PAYLOAD_TYPE_GRP_TXT,
@@ -32,6 +31,7 @@ from mcbot.models.internal.extension import Extension
 from mcbot.models.internal.packet import PacketRecord
 from mcbot.models.internal.task import Task
 from mcbot.models.internal.triggers import IntervalTrigger, TimeTrigger
+from mcbot.node.node import MeshNode
 from mcbot.utils.board_configs import HARDWARE_CONFIGS
 from mcbot.utils.identity import create_or_load_identity, get_seed
 from mcbot.utils.radio import create_radio
