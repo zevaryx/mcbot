@@ -81,6 +81,68 @@ UPDATE contacts
  WHERE public_key=:public_key
 """
 
+SQL_CREATE_MESSAGE_STATS = """
+CREATE TABLE IF NOT EXISTS message_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp INTEGER NOT NULL,
+    sender_id TEXT NOT NULL,
+    channel TEXT,
+    content TEXT NOT NULL,
+    is_dm BOOLEAN NOT NULL,
+    hops INTEGER,
+    snr REAL,
+    rssi INTEGER,
+    path TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+SQL_CREATE_COMPLETE_CONTACT_TRACKING = """
+CREATE TABLE IF NOT EXISTS complete_contact_tracking (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_key TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL,
+    device_type TEXT,
+    first_heard TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_heard TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    advert_count INTEGER DEFAULT 1,
+    latitude REAL,
+    longitude REAL,
+    city TEXT,
+    state TEXT,
+    country TEXT,
+    raw_advert_data TEXT,
+    signal_strength REAL,
+    snr REAL,
+    hop_count INTEGER,
+    is_currently_tracked BOOLEAN DEFAULT 0,
+    last_advert_timestamp TIMESTAMP,
+    location_accuracy REAL,
+    contact_source TEXT DEFAULT 'advertisement',
+    out_path TEXT,
+    out_path_len INTEGER,
+    is_starred INTEGER DEFAULT 0
+);
+"""
+
+SQL_CREATE_MESH_CONNECTIONS = """
+CREATE TABLE IF NOT EXISTS mesh_connections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_prefix TEXT NOT NULL,
+    to_prefix TEXT NOT NULL,
+    from_public_key TEXT,
+    to_public_key TEXT,
+    observation_count INTEGER DEFAULT 1,
+    first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    avg_hop_position REAL,
+    geographic_distance REAL,
+    UNIQUE(from_prefix, to_prefix)
+);
+"""
+
+
 class SQLiteHelper:
     def __init__(self, settings: Settings):
         self.settings = settings.sqlite
@@ -93,6 +155,20 @@ class SQLiteHelper:
         async with aiosqlite.connect(self.path) as db:
             await db.execute(SQL_CREATE_CONTACTS)
             await db.execute(SQL_CREATE_LAST_ADVERT)
+            await db.execute(SQL_CREATE_COMPLETE_CONTACT_TRACKING)
+            await db.execute(SQL_CREATE_MESH_CONNECTIONS)
+            await db.execute(SQL_CREATE_MESSAGE_STATS)
+            
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_complete_public_key ON complete_contact_tracking(public_key)')
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_complete_role ON complete_contact_tracking(role)')
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_complete_last_heard ON complete_contact_tracking(last_heard)')
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_complete_currently_tracked ON complete_contact_tracking(is_currently_tracked)')
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_complete_location ON complete_contact_tracking(latitude, longitude)')
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_complete_role_tracked ON complete_contact_tracking(role, is_currently_tracked)')
+            
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_from_prefix ON mesh_connections(from_prefix)')
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_to_prefix ON mesh_connections(to_prefix)')
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_last_seen ON mesh_connections(last_seen)')
             
     async def load_contacts(self) -> list[Contact]:
         """Load all contacts from the database"""

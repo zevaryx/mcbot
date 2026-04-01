@@ -4,9 +4,11 @@ from pathlib import Path
 
 from pymc_core import LocalIdentity
 
+from mcbot.const import DATA_DIR
+
 logger = logging.getLogger(__name__)
 
-def get_seed(path: Path | str = Path.home() / ".config/mcbot/identity.key") -> str:
+def get_seed(path: Path | str = DATA_DIR / "identity.key") -> str:
     path = Path(path)
     if not path.exists():
         raise ValueError("Please call `create_or_load_identity` first!")
@@ -14,7 +16,7 @@ def get_seed(path: Path | str = Path.home() / ".config/mcbot/identity.key") -> s
     return seed.hex()
 
 def create_or_load_identity(identity: str | None = None) -> LocalIdentity:
-    saved_seed = Path.home() / ".config/mcbot/identity.key"
+    saved_seed = DATA_DIR / "identity.key"
     if identity:
         logger.info("Using existing identity seed")
         seed = bytes.fromhex(identity)

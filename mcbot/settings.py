@@ -21,6 +21,31 @@ class Channel(BaseModel):
 class SQLite(BaseModel):
     path: str = "storage.db"
     
+class Scoring(BaseModel):
+    infrastructure_weight: float = 0.40
+    hop_weight: float = 0.35
+    path_bonus_weight: float = 0.15
+    freshness_weight: float = 0.10
+    base_delay_ms: int = 2000
+    min_delay_ms: int = 100
+    max_jitter_ms: int = 200
+    degrade_after_seconds: int = 3600
+    degrade_target: float = 0.5
+    degrade_window_seconds: int = 86400
+    fallback_min_delivery_score: float = 0.30
+    min_signal_score: float = 0.30
+    
+class Coordinator(BaseModel):
+    url: str = ""
+    registration_key: str = ""
+    bot_token: str = ""
+    heartbeat_interval: int = 30
+    coordination_timeout_ms: int = 500
+    batch_interval_seconds: int = 5
+    batch_max_size: int = 50
+    mesh_region: str = ""
+    scoring: Scoring = Scoring()
+    
 class Broker(BaseModel):
     name: str
     host: str
@@ -61,6 +86,7 @@ class Settings(BaseSettings, case_sensitive=False):
     channels: list[Channel] = Field(default_factory=list)
     letsmesh: Optional[LetsMesh] = None
     sqlite: Optional[SQLite] = None
+    coordinator: Coordinator = Coordinator()
     
     @classmethod
     def load_settings(cls: type[Self], path: str | Path = Path("config.yaml")) -> Self:
