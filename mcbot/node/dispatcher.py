@@ -37,7 +37,7 @@ class Dispatcher(pyMC_Dispatcher):
                 else:
                     cb(data, rssi_val, snr_val)
             except Exception as e:
-                self._logger.debug(f"Raw RX subscriber error: {e}")
+                self._logger.error(f"Raw RX subscriber error: {e}")
 
         # Blacklist check uses raw-frame hash (catches known-bad bytes before parsing)
         raw_hash = self.packet_filter.generate_hash(data)
@@ -53,7 +53,7 @@ class Dispatcher(pyMC_Dispatcher):
         except Exception as err:
             self._logger.debug(f"Malformed packet: {err}")
             self.packet_filter.blacklist(raw_hash)
-            self._logger.debug(f"Blacklisted malformed packet (raw hash: {raw_hash})")
+            self._logger.error(f"Blacklisted malformed packet (raw hash: {raw_hash})")
             return
 
         # Packets at max hops for their path encoding must not be retransmitted
