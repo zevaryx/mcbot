@@ -122,7 +122,7 @@ class LetsMeshBroker:
     
     def _on_connect(self, client: mqtt.Client, userdata, flags, rc: int):
         if rc == 0:
-            self._logger.info(f"Connected to {self.name}")
+            self._logger.info(f"Broker {self.name}: Connected")
             self._running = True
             
             self.publish_status(
@@ -134,7 +134,7 @@ class LetsMeshBroker:
                 import threading
                 self._status_task = threading.Thread(target=self._status_heartbeat_loop, daemon=True)
                 self._status_task.start()
-                self._logger.info(f"Started status heartbeat (interval: {self.status_interval}s)")
+                self._logger.info(f"Broker {self.name}: Started status heartbeat (interval: {self.status_interval}s)")
         else:
             self._logger.error(f"Failed with code {rc}")
             
@@ -281,9 +281,6 @@ class LetsMeshBroker:
         
             
     def publish(self, subtopic: str, payload: dict, retain: bool = False) -> mqtt.MQTTMessageInfo:
-        if not self._running:
-            self._logger.warning(f"Broker {self.name}: Disconnected, attempting to reconnect...")
-            self.reconnect()
         topic = self._topic(subtopic)
         message = json.dumps(payload)
         result = self.client.publish(topic, message, retain=retain)
