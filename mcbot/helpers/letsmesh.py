@@ -197,6 +197,18 @@ class LetsMeshBroker:
         self.client.loop_stop()
         self.client.disconnect()
         self._logger.info("Disconnected")
+        
+    def reconnect(self):
+        if self._running:
+            try:
+                self.disconnect()
+            except Exception as e:
+                self._logger.info(f"Broker {self.name}: Disconnect failed, not fully unexpected, manually running disconnect")
+                self._running = False
+                self.client.loop_stop()
+                self.client.disconnect()
+                
+        self.connect()
 
     def _status_heartbeat_loop(self):
         """Background thread that publishes periodic status updates"""
@@ -269,10 +281,17 @@ class LetsMeshBroker:
         
             
     def publish(self, subtopic: str, payload: dict, retain: bool = False) -> mqtt.MQTTMessageInfo:
+        if not self._running:
+            self._logger.warning(f"Broker {self.name}: Disconnected, attempting to reconnect...")
+            self.reconnect()
         topic = self._topic(subtopic)
         message = json.dumps(payload)
         result = self.client.publish(topic, message, retain=retain)
-        self._logger.debug(f"Broker {self.name}: Publish result: {result.rc=} {result.is_published()=}")
+        if result.rc > 0:
+            self._logger.error(f"Broker {self.name}: Publish failed, attempting to reconnect and publish again")
+            self.reconnect()
+            result = self.client.publish(topic, message, retain=retain)
+        self._logger.debug(f"Broker {self.name}: Publish result: {result.rc=}")
         self._logger.debug(f"Broker {self.name}: Published to {topic}: {message}")
         return result
             
